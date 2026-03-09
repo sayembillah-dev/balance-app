@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 
 const String _keyAccounts = 'accounts';
+const String _keyAccountOrder = 'account_order';
 const String _keyTransactions = 'transactions';
 const String _keyPresets = 'presets';
 const String _keyMonthlyBudgets = 'monthly_budgets';
@@ -45,6 +46,25 @@ Future<List<AccountItem>> loadAccounts() async {
     return list
         .map((e) => AccountItem.fromJson(e as Map<String, dynamic>))
         .toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Future<void> saveAccountOrder(List<String> ids) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setString(_keyAccountOrder, jsonEncode(ids));
+}
+
+Future<List<String>> loadAccountOrder() async {
+  final prefs = await _prefs();
+  if (prefs == null) return [];
+  final raw = prefs.getString(_keyAccountOrder);
+  if (raw == null) return [];
+  try {
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list.map((e) => e as String).toList();
   } catch (_) {
     return [];
   }

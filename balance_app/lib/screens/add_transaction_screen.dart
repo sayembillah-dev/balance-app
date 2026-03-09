@@ -209,7 +209,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
         ? null
         : _descriptionController.text.trim();
     final notifier = ref.read(transactionsProvider.notifier);
-    final id = widget.editFrom != null ? widget.editFrom!.id : notifier.nextId();
+    final id = widget.editFrom != null
+        ? widget.editFrom!.id
+        : notifier.nextId();
     final item = TransactionItem(
       id: id,
       categoryName: categoryName,
@@ -234,14 +236,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
     if (widget.editFrom != null && !_editApplied) {
       _editApplied = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.editFrom != null)
+        if (mounted && widget.editFrom != null) {
           _applyEdit(widget.editFrom!);
+        }
       });
     } else if (widget.duplicateFrom != null && !_duplicateApplied) {
       _duplicateApplied = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.duplicateFrom != null)
+        if (mounted && widget.duplicateFrom != null) {
           _applyDuplicate(widget.duplicateFrom!);
+        }
       });
     }
     final theme = Theme.of(context);
@@ -478,12 +482,27 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
   }
 
   static DateTime _parseStoredDate(String dateStr) {
-    const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+    const months = {
+      'Jan': 1,
+      'Feb': 2,
+      'Mar': 3,
+      'Apr': 4,
+      'May': 5,
+      'Jun': 6,
+      'Jul': 7,
+      'Aug': 8,
+      'Sep': 9,
+      'Oct': 10,
+      'Nov': 11,
+      'Dec': 12,
+    };
     final parts = dateStr.trim().split(RegExp(r'\s+'));
     if (parts.length < 2) return DateTime.now();
     final m = months[parts[0]];
     final d = int.tryParse(parts[1]);
-    final y = parts.length >= 3 ? (int.tryParse(parts[2]) ?? DateTime.now().year) : DateTime.now().year;
+    final y = parts.length >= 3
+        ? (int.tryParse(parts[2]) ?? DateTime.now().year)
+        : DateTime.now().year;
     if (m == null || d == null) return DateTime.now();
     try {
       return DateTime(y, m, d);
@@ -493,7 +512,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
   }
 
   static TimeOfDay _parseStoredTime(String timeStr) {
-    final match = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)?', caseSensitive: false).firstMatch(timeStr);
+    final match = RegExp(
+      r'(\d{1,2}):(\d{2})\s*(AM|PM)?',
+      caseSensitive: false,
+    ).firstMatch(timeStr);
     if (match == null) return TimeOfDay.now();
     var h = int.tryParse(match.group(1) ?? '') ?? 12;
     final m = int.tryParse(match.group(2) ?? '') ?? 0;
@@ -810,8 +832,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             exclude: null,
           ),
         );
-        if (account != null && mounted)
+        if (account != null && mounted) {
           setState(() => _selectedAccount = account);
+        }
       },
       padding: cardPadding,
       fontSize: fontSize,
@@ -837,8 +860,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             exclude: _selectedToAccount,
           ),
         );
-        if (account != null && mounted)
+        if (account != null && mounted) {
           setState(() => _selectedFromAccount = account);
+        }
       },
       padding: cardPadding,
       fontSize: fontSize,
@@ -864,8 +888,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             exclude: _selectedFromAccount,
           ),
         );
-        if (account != null && mounted)
+        if (account != null && mounted) {
           setState(() => _selectedToAccount = account);
+        }
       },
       padding: cardPadding,
       fontSize: fontSize,

@@ -6,14 +6,39 @@ import '../utils/currency_format.dart';
 
 // --- Accounts ---
 
+/// Applies saved order to accounts. Default: oldest first (by id), so newest last.
+List<AccountItem> _applyAccountOrder(List<AccountItem> accounts, List<String> orderIds) {
+  if (accounts.isEmpty) return accounts;
+  if (orderIds.isEmpty) {
+    final sorted = List<AccountItem>.from(accounts);
+    sorted.sort((a, b) => (int.tryParse(a.id) ?? 0).compareTo(int.tryParse(b.id) ?? 0));
+    return sorted;
+  }
+  final byId = {for (final a in accounts) a.id: a};
+  final ordered = <AccountItem>[];
+  for (final id in orderIds) {
+    if (byId.containsKey(id)) ordered.add(byId[id]!);
+  }
+  for (final a in accounts) {
+    if (!orderIds.contains(a.id)) ordered.add(a);
+  }
+  return ordered;
+}
+
 class AccountsNotifier extends AsyncNotifier<List<AccountItem>> {
   @override
-  Future<List<AccountItem>> build() async => await loadAccounts();
+  Future<List<AccountItem>> build() async {
+    final list = await loadAccounts();
+    final orderIds = await loadAccountOrder();
+    return _applyAccountOrder(list, orderIds);
+  }
 
   Future<void> add(AccountItem a) async {
     final list = state.value ?? [];
-    state = AsyncValue.data([a, ...list]);
-    await saveAccounts(state.value!);
+    final newList = [...list, a];
+    state = AsyncValue.data(newList);
+    await saveAccounts(newList);
+    await saveAccountOrder(newList.map((e) => e.id).toList());
   }
 
   Future<void> updateAccount(AccountItem a) async {
@@ -28,8 +53,23 @@ class AccountsNotifier extends AsyncNotifier<List<AccountItem>> {
 
   Future<void> remove(String id) async {
     final list = state.value ?? [];
-    state = AsyncValue.data(list.where((e) => e.id != id).toList());
-    await saveAccounts(state.value!);
+    final newList = list.where((e) => e.id != id).toList();
+    state = AsyncValue.data(newList);
+    await saveAccounts(newList);
+    await saveAccountOrder(newList.map((e) => e.id).toList());
+  }
+
+  /// Reorder accounts (e.g. from ReorderableListView). Persists order for Accounts page and Dashboard.
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    final list = state.value ?? [];
+    if (oldIndex < 0 || oldIndex >= list.length || newIndex < 0 || newIndex >= list.length) return;
+    if (oldIndex == newIndex) return;
+    int insertIndex = newIndex;
+    if (newIndex > oldIndex) insertIndex = newIndex - 1;
+    final item = list[oldIndex];
+    final newList = List<AccountItem>.from(list)..removeAt(oldIndex)..insert(insertIndex, item);
+    state = AsyncValue.data(newList);
+    await saveAccountOrder(newList.map((e) => e.id).toList());
   }
 
   String nextId() {

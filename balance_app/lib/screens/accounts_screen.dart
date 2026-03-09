@@ -103,12 +103,16 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                           elevation: 0,
                           scrolledUnderElevation: 0,
                         ),
-                        body: ListView.builder(
+                        body: ReorderableListView.builder(
                           padding: EdgeInsets.fromLTRB(padding, 16, padding, 24 + media.padding.bottom),
                           itemCount: accounts.length,
+                          onReorder: (oldIndex, newIndex) {
+                            ref.read(accountsProvider.notifier).reorder(oldIndex, newIndex);
+                          },
                           itemBuilder: (context, index) {
                             final account = accounts[index];
                             return Padding(
+                              key: ValueKey(account.id),
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _AccountListCard(
                                 account: account,
@@ -170,6 +174,8 @@ class _AccountListCard extends StatelessWidget {
           padding: EdgeInsets.all(isNarrow ? 14 : 18),
           child: Row(
             children: [
+              Icon(Icons.drag_handle_rounded, color: Colors.grey[400], size: 24),
+              SizedBox(width: isNarrow ? 10 : 12),
               Container(
                 width: isNarrow ? 48 : 56,
                 height: isNarrow ? 48 : 56,
