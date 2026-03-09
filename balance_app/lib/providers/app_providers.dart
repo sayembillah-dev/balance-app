@@ -1,0 +1,388 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/dummy_data.dart';
+import '../data/local_storage.dart';
+import 'currency_provider.dart';
+import '../utils/currency_format.dart';
+
+// --- Accounts ---
+
+class AccountsNotifier extends AsyncNotifier<List<AccountItem>> {
+  @override
+  Future<List<AccountItem>> build() async => await loadAccounts();
+
+  Future<void> add(AccountItem a) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([a, ...list]);
+    await saveAccounts(state.value!);
+  }
+
+  Future<void> updateAccount(AccountItem a) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == a.id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = a;
+    state = AsyncValue.data(newList);
+    await saveAccounts(state.value!);
+  }
+
+  Future<void> remove(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    await saveAccounts(state.value!);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    final ids = list.map((e) => int.tryParse(e.id) ?? 0);
+    return ((ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b)) + 1).toString();
+  }
+}
+
+final accountsProvider =
+    AsyncNotifierProvider<AccountsNotifier, List<AccountItem>>(AccountsNotifier.new);
+
+// --- Transactions ---
+
+class TransactionsNotifier extends AsyncNotifier<List<TransactionItem>> {
+  @override
+  Future<List<TransactionItem>> build() async => await loadTransactions();
+
+  Future<void> add(TransactionItem t) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([t, ...list]);
+    await saveTransactions(state.value!);
+  }
+
+  Future<void> removeById(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    await saveTransactions(state.value!);
+  }
+
+  Future<void> replaceById(String id, TransactionItem t) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = t;
+    state = AsyncValue.data(newList);
+    await saveTransactions(state.value!);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    final ids = list.map((e) => int.tryParse(e.id) ?? 0);
+    return ((ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b)) + 1).toString();
+  }
+}
+
+final transactionsProvider =
+    AsyncNotifierProvider<TransactionsNotifier, List<TransactionItem>>(TransactionsNotifier.new);
+
+// --- Presets ---
+
+class PresetsNotifier extends AsyncNotifier<List<PresetItem>> {
+  @override
+  Future<List<PresetItem>> build() async => await loadPresets();
+
+  Future<void> add(PresetItem p) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([...list, p]);
+    await savePresets(state.value!);
+  }
+
+  Future<void> replace(String id, PresetItem p) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = p;
+    state = AsyncValue.data(newList);
+    await savePresets(state.value!);
+  }
+
+  Future<void> remove(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    await savePresets(state.value!);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    int max = 0;
+    for (final e in list) {
+      final n = int.tryParse(e.id.replaceFirst('p', '')) ?? 0;
+      if (n > max) max = n;
+    }
+    return 'p${max + 1}';
+  }
+}
+
+final presetsProvider =
+    AsyncNotifierProvider<PresetsNotifier, List<PresetItem>>(PresetsNotifier.new);
+
+// --- Monthly budgets ---
+
+class MonthlyBudgetsNotifier extends AsyncNotifier<List<MonthlyBudget>> {
+  @override
+  Future<List<MonthlyBudget>> build() async => await loadMonthlyBudgets();
+
+  Future<void> add(MonthlyBudget b) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([...list, b]);
+    await saveMonthlyBudgets(state.value!);
+  }
+
+  Future<void> replaceById(String id, MonthlyBudget b) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = b;
+    state = AsyncValue.data(newList);
+    await saveMonthlyBudgets(state.value!);
+  }
+
+  Future<void> remove(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    await saveMonthlyBudgets(state.value!);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    int max = 0;
+    for (final e in list) {
+      final n = int.tryParse(e.id.replaceFirst('mb', '')) ?? 0;
+      if (n > max) max = n;
+    }
+    return 'mb${max + 1}';
+  }
+}
+
+final monthlyBudgetsProvider =
+    AsyncNotifierProvider<MonthlyBudgetsNotifier, List<MonthlyBudget>>(MonthlyBudgetsNotifier.new);
+
+// --- Categories ---
+
+List<TransactionCategory> _seedCategories() {
+  return defaultTransactionCategories.map((c) {
+    return TransactionCategory(
+      id: c.id,
+      name: c.name,
+      emoji: c.emoji,
+      isUserCreated: false,
+      subcategories: c.subcategories.map((s) => SubcategoryItem(
+        name: s.name,
+        emoji: s.emoji,
+        isHidden: false,
+        isUserCreated: false,
+      )).toList(),
+    );
+  }).toList();
+}
+
+class CategoriesNotifier extends AsyncNotifier<List<TransactionCategory>> {
+  @override
+  Future<List<TransactionCategory>> build() async {
+    final list = await loadCategories();
+    if (list.isEmpty) {
+      final seed = _seedCategories();
+      await saveCategories(seed);
+      return seed;
+    }
+    return list;
+  }
+
+  Future<void> add(TransactionCategory c) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([...list, c]);
+    await saveCategories(state.value!);
+  }
+
+  Future<void> replaceAt(int index, TransactionCategory c) async {
+    final list = state.value ?? [];
+    if (index < 0 || index >= list.length) return;
+    final newList = [...list];
+    newList[index] = c;
+    state = AsyncValue.data(newList);
+    await saveCategories(state.value!);
+  }
+
+  Future<void> replaceById(String id, TransactionCategory c) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = c;
+    state = AsyncValue.data(newList);
+    await saveCategories(state.value!);
+  }
+
+  Future<void> removeUserCategory(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => !(e.id == id && e.isUserCreated)).toList());
+    await saveCategories(state.value!);
+  }
+
+  Future<void> reorder(int from, int to) async {
+    final list = state.value ?? [];
+    if (from < 0 || from >= list.length || to < 0 || to >= list.length) return;
+    final item = list[from];
+    final newList = [...list];
+    newList.removeAt(from);
+    newList.insert(to, item);
+    state = AsyncValue.data(newList);
+    await saveCategories(state.value!);
+  }
+
+  String nextUserCategoryId() {
+    final list = state.value ?? [];
+    final existing = list.where((c) => c.isUserCreated).map((c) => c.id).toSet();
+    int n = 1;
+    while (existing.contains('u$n')) { n++; }
+    return 'u$n';
+  }
+
+  String nextUserSubcategoryId() {
+    final list = state.value ?? [];
+    String? max;
+    for (final c in list) {
+      for (final s in c.subcategories) {
+        if (s.id != null) {
+          final num = int.tryParse(s.id!.replaceFirst('s', '')) ?? 0;
+          if (max == null || (int.tryParse(max.replaceFirst('s', '')) ?? 0) < num) max = s.id;
+        }
+      }
+    }
+    final next = (int.tryParse(max?.replaceFirst('s', '') ?? '0') ?? 0) + 1;
+    return 's$next';
+  }
+}
+
+final categoriesProvider =
+    AsyncNotifierProvider<CategoriesNotifier, List<TransactionCategory>>(CategoriesNotifier.new);
+
+/// Categories for picker (hidden subcategories filtered out).
+final categoriesForPickerProvider = Provider<List<TransactionCategory>>((ref) {
+  final asyncCategories = ref.watch(categoriesProvider);
+  return asyncCategories.when(
+    data: (list) => list.map((c) => c.copyWith(
+      subcategories: c.subcategories.where((s) => !s.isHidden).toList(),
+    )).toList(),
+    loading: () => [],
+    error: (_, Object? _) => [],
+  );
+});
+
+// --- Balance (computed from accounts + transactions) ---
+
+double _parseAmount(String amount) {
+  final cleaned = amount.replaceAll(RegExp(r'[^\d.-]'), '');
+  if (cleaned.isEmpty) return 0;
+  final neg = amount.trimLeft().startsWith('-');
+  final v = double.tryParse(cleaned) ?? 0;
+  return neg ? -v : v;
+}
+
+final balanceProvider = Provider<String>((ref) {
+  final accountsAsync = ref.watch(accountsProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+  final currencyCode = ref.watch(selectedCurrencyCodeProvider);
+  final accountsList = accountsAsync.value ?? <AccountItem>[];
+  final transactionsList = transactionsAsync.value ?? <TransactionItem>[];
+  double total = 0;
+  for (final a in accountsList) {
+    total += a.initialBalance;
+  }
+  for (final t in transactionsList) {
+    total += _parseAmount(t.amount);
+  }
+  return formatAmountWithCurrency(total, currencyCode);
+});
+
+// --- Account monthly totals (monthExpense / monthIncome computed for current month) ---
+
+class AccountTotals {
+  const AccountTotals({required this.monthExpense, required this.monthIncome});
+  final String monthExpense;
+  final String monthIncome;
+}
+
+final accountTotalsProvider = Provider<Map<String, AccountTotals>>((ref) {
+  final accountsAsync = ref.watch(accountsProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+  final currencyCode = ref.watch(selectedCurrencyCodeProvider);
+  final accountsList = accountsAsync.value ?? <AccountItem>[];
+  final transactionsList = transactionsAsync.value ?? <TransactionItem>[];
+  final now = DateTime.now();
+  final result = <String, AccountTotals>{};
+  for (final a in accountsList) {
+    double expense = 0;
+    double income = 0;
+    for (final t in transactionsList) {
+      if (t.accountId != a.id) { continue; }
+      final dt = _parseTransactionDate(t.date);
+      if (dt == null || dt.year != now.year || dt.month != now.month) { continue; }
+      final amt = _parseAmount(t.amount);
+      if (amt < 0) {
+        expense += -amt;
+      } else {
+        income += amt;
+      }
+    }
+    result[a.id] = AccountTotals(
+      monthExpense: formatAmountWithCurrency(expense, currencyCode),
+      monthIncome: formatAmountWithCurrency(income, currencyCode),
+    );
+  }
+  return result;
+});
+
+/// Spending by category for a given month/year (only type == deducted).
+/// Keys are category IDs; values are total spent (positive). Used by budget detail.
+String? _categoryNameToCategoryId(String name, List<TransactionCategory> categories) {
+  final normalized = name.trim().toLowerCase();
+  if (normalized.isEmpty) return null;
+  for (final c in categories) {
+    if (c.name.trim().toLowerCase() == normalized) return c.id;
+    for (final s in c.subcategories) {
+      if (s.name.trim().toLowerCase() == normalized) return c.id;
+    }
+  }
+  return null;
+}
+
+final monthlySpendingByCategoryProvider =
+    Provider.family<Map<String, double>, (int month, int year)>((ref, key) {
+  final month = key.$1;
+  final year = key.$2;
+  final transactions = ref.watch(transactionsProvider).value ?? [];
+  // Use full category list (including hidden subcategories) so spending is attributed correctly
+  final categories = ref.watch(categoriesProvider).value ?? [];
+  final result = <String, double>{};
+  for (final t in transactions) {
+    if (t.type != TransactionType.deducted) continue;
+    final dt = _parseTransactionDate(t.date);
+    if (dt == null || dt.month != month || dt.year != year) continue;
+    final amt = _parseAmount(t.amount);
+    final spent = amt < 0 ? -amt : amt;
+    final categoryId = _categoryNameToCategoryId(t.categoryName, categories);
+    if (categoryId != null) {
+      result[categoryId] = (result[categoryId] ?? 0) + spent;
+    }
+  }
+  return result;
+});
+
+DateTime? _parseTransactionDate(String dateStr) {
+  const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+  final parts = dateStr.trim().split(RegExp(r'\s+'));
+  if (parts.length < 2) return null;
+  final m = months[parts[0]];
+  final d = int.tryParse(parts[1]);
+  if (m == null || d == null) return null;
+  final year = parts.length >= 3 ? (int.tryParse(parts[2]) ?? DateTime.now().year) : DateTime.now().year;
+  return DateTime(year, m, d);
+}
