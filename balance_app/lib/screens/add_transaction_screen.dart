@@ -1,4 +1,3 @@
-import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/dummy_data.dart';
@@ -37,10 +36,6 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  AnimationController? _dotController;
-  Animation<double>? _dotAnimation;
-  double _dotOffset = 0;
-  double _dotTargetOffset = 0;
   static const List<String> _tabLabels = [
     'Spend',
     'Income',
@@ -65,42 +60,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    final dotController = AnimationController(
-      duration: const Duration(milliseconds: 450),
-      vsync: this,
-    );
-    _dotController = dotController;
-    _dotAnimation = CurvedAnimation(
-      parent: dotController,
-      curve: Curves.elasticOut,
-    );
-    _tabController.addListener(_onTabChanged);
-    dotController.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        setState(() => _dotOffset = _dotTargetOffset);
-      }
-    });
-  }
-
-  void _onTabChanged() {
-    if (!_tabController.indexIsChanging && mounted) {
-      final index = _tabController.index;
-      setState(() => _dotTargetOffset = index.toDouble());
-      _dotController?.forward(from: 0);
-    }
-  }
-
-  void _onTabTapped(int index) {
-    if (!mounted) return;
-    setState(() => _dotTargetOffset = index.toDouble());
-    _dotController?.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
-    _dotController?.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -360,44 +324,33 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        bottom: _dotAnimation != null && _dotController != null
-            ? _AddTransactionTabBar(
-                tabController: _tabController,
-                dotAnimation: _dotAnimation!,
-                dotOffset: _dotOffset,
-                dotTargetOffset: _dotTargetOffset,
-                isNarrow: isNarrow,
-                horizontalPadding: horizontalPadding,
-                tabLabels: _tabLabels,
-                onTabTapped: _onTabTapped,
-              )
-            : PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: 8,
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    tabAlignment: TabAlignment.center,
-                    isScrollable: false,
-                    dividerColor: Colors.transparent,
-                    indicatorColor: Colors.grey,
-                    tabs: _tabLabels.map((l) => Tab(text: l)).toList(),
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.grey,
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: isNarrow ? 13 : 14,
-                    ),
-                    unselectedLabelStyle: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: isNarrow ? 13 : 14,
-                    ),
-                  ),
-                ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: 8,
+            ),
+            child: TabBar(
+              controller: _tabController,
+              tabAlignment: TabAlignment.center,
+              isScrollable: false,
+              dividerColor: Colors.transparent,
+              indicatorColor: Colors.grey,
+              tabs: _tabLabels.map((l) => Tab(text: l)).toList(),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.grey,
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: isNarrow ? 13 : 14,
               ),
+              unselectedLabelStyle: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: isNarrow ? 13 : 14,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Container(
         color: _kBgGrey,
@@ -521,9 +474,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
     final amountStr = item.amount.replaceAll(RegExp(r'[^\d.]'), '');
     final amount = amountStr.isEmpty
         ? '0'
-        : (double.tryParse(amountStr) ?? 0).toStringAsFixed(
-            amountStr.contains('.') ? 2 : 0,
-          );
+        : formatAmountTruncated(double.tryParse(amountStr) ?? 0);
     final targetTab = item.type == TransactionType.deducted
         ? 0
         : item.type == TransactionType.added
@@ -642,9 +593,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
     final amountStr = item.amount.replaceAll(RegExp(r'[^\d.]'), '');
     final amount = amountStr.isEmpty
         ? '0'
-        : (double.tryParse(amountStr) ?? 0).toStringAsFixed(
-            amountStr.contains('.') ? 2 : 0,
-          );
+        : formatAmountTruncated(double.tryParse(amountStr) ?? 0);
     final targetTab = item.type == TransactionType.deducted
         ? 0
         : item.type == TransactionType.added
@@ -1153,108 +1102,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _AddTransactionTabBar extends StatelessWidget
-    implements PreferredSizeWidget {
-  const _AddTransactionTabBar({
-    required this.tabController,
-    required this.dotAnimation,
-    required this.dotOffset,
-    required this.dotTargetOffset,
-    required this.isNarrow,
-    required this.horizontalPadding,
-    required this.tabLabels,
-    this.onTabTapped,
-  });
-
-  final TabController tabController;
-  final Animation<double> dotAnimation;
-  final double dotOffset;
-  final double dotTargetOffset;
-  final bool isNarrow;
-  final double horizontalPadding;
-  final List<String> tabLabels;
-  final void Function(int index)? onTabTapped;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(48);
-
-  @override
-  Widget build(BuildContext context) {
-    final fontSize = isNarrow ? 13.0 : 14.0;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final segmentWidth = width / 4;
-          return SizedBox(
-            height: 40,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Row(
-                    children: List.generate(4, (index) {
-                      final selected = tabController.index == index;
-                      return Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            onTabTapped?.call(index);
-                            tabController.animateTo(index);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Center(
-                            child: Text(
-                              tabLabels[index],
-                              style: TextStyle(
-                                color: selected ? Colors.white : Colors.grey,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                fontSize: fontSize,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: dotAnimation,
-                  builder: (context, child) {
-                    final t = dotAnimation.value;
-                    final dotCenterX =
-                        (lerpDouble(dotOffset, dotTargetOffset, t) ??
-                                dotOffset) *
-                            segmentWidth +
-                        segmentWidth * 0.5;
-                    return Positioned(
-                      left: dotCenterX - 4,
-                      top: 0,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        },
       ),
     );
   }

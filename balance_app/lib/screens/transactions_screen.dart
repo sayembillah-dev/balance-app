@@ -293,8 +293,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
       ));
     }
     if (_filters.amountMin != null || _filters.amountMax != null) {
-      final min = _filters.amountMin?.toStringAsFixed(0) ?? '—';
-      final max = _filters.amountMax?.toStringAsFixed(0) ?? '—';
+      final min = _filters.amountMin != null
+          ? formatAmountTruncated(_filters.amountMin!)
+          : '—';
+      final max = _filters.amountMax != null
+          ? formatAmountTruncated(_filters.amountMax!)
+          : '—';
       chips.add(_filterChip(
         isNarrow,
         '$min - $max',
@@ -649,12 +653,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     _dateTo = widget.initialFilters.dateTo;
     _amountMinController = TextEditingController(
       text: widget.initialFilters.amountMin != null
-          ? widget.initialFilters.amountMin!.toStringAsFixed(0)
+          ? formatAmountTruncated(widget.initialFilters.amountMin!)
           : '',
     );
     _amountMaxController = TextEditingController(
       text: widget.initialFilters.amountMax != null
-          ? widget.initialFilters.amountMax!.toStringAsFixed(0)
+          ? formatAmountTruncated(widget.initialFilters.amountMax!)
           : '',
     );
   }
