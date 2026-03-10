@@ -35,9 +35,12 @@ class TransactionListRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: const Color(0xFF1C1C1E).withOpacity(0.06),
+        highlightColor: const Color(0xFF1C1C1E).withOpacity(0.04),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 0,
+            horizontal: 4,
             vertical: isNarrow ? 12 : 14,
           ),
           child: Row(

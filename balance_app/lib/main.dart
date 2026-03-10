@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lottie/lottie.dart';
 import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/add_transaction_screen.dart';
@@ -71,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
@@ -91,8 +92,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // After splash animation + short hold, navigate to Server/Try screen
-    Future.delayed(const Duration(milliseconds: 2800), _navigateToWelcome);
+    // After splash animation + brief hold, navigate to Server/Try screen
+    Future.delayed(const Duration(milliseconds: 1500), _navigateToWelcome);
   }
 
   void _navigateToWelcome() {
@@ -122,14 +123,18 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             );
           },
-          child: Row(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Dummy icon – replace with your own asset later, e.g.:
-              // Image.asset('assets/icons/app_icon.png', width: 48, height: 48)
-              Icon(Icons.balance_rounded, size: 48, color: Colors.black),
-              const SizedBox(width: 12),
+              Lottie.asset(
+                'assets/animations/splash.json',
+                width: 160,
+                height: 160,
+                fit: BoxFit.contain,
+                repeat: false,
+              ),
+              const SizedBox(height: 16),
               Text(
                 'Balance',
                 style: TextStyle(
