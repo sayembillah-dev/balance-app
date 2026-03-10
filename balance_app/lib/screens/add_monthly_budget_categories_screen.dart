@@ -58,7 +58,7 @@ class _AddMonthlyBudgetCategoriesScreenState
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     final valid = <BudgetCategoryEntry>[];
     for (final row in _entries) {
       if (row.category == null) continue;
@@ -85,12 +85,14 @@ class _AddMonthlyBudgetCategoriesScreenState
       year: widget.year,
       regularIncome: widget.regularIncome,
       entries: valid,
+      budgetTagId: widget.editBudget?.budgetTagId,
     );
     if (widget.editBudget != null) {
-      notifier.replaceById(widget.editBudget!.id, budget);
+      await notifier.replaceById(widget.editBudget!.id, budget);
     } else {
-      notifier.add(budget);
+      await notifier.add(budget);
     }
+    await ensureBudgetTags(ref, budget);
     if (mounted) Navigator.of(context).pop(true);
   }
 

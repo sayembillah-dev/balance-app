@@ -215,6 +215,127 @@ class MonthlyBudgetsNotifier extends AsyncNotifier<List<MonthlyBudget>> {
 final monthlyBudgetsProvider =
     AsyncNotifierProvider<MonthlyBudgetsNotifier, List<MonthlyBudget>>(MonthlyBudgetsNotifier.new);
 
+/// Current month's budget (first match by month/year). Used for ensure tags and add-transaction.
+final currentMonthBudgetProvider = Provider<MonthlyBudget?>((ref) {
+  final list = ref.watch(monthlyBudgetsProvider).value ?? [];
+  final now = DateTime.now();
+  for (final b in list) {
+    if (b.month == now.month && b.year == now.year) return b;
+  }
+  return null;
+});
+
+/// Tag-aware spending per budget entry. Keys are categoryId; only transactions with the budget's single tag count.
+final budgetSpendingByEntryProvider =
+    Provider.family<Map<String, double>, String>((ref, budgetId) {
+  final budgets = ref.watch(monthlyBudgetsProvider).value ?? [];
+  MonthlyBudget? budget;
+  for (final b in budgets) {
+    if (b.id == budgetId) {
+      budget = b;
+      break;
+    }
+  }
+  if (budget == null) return {};
+  final tagId = budget.budgetTagId;
+  if (tagId == null) {
+    return {for (final e in budget.entries) e.categoryId: 0.0};
+  }
+  final transactions = ref.watch(transactionsProvider).value ?? [];
+  final categories = ref.watch(categoriesProvider).value ?? [];
+  final result = <String, double>{};
+  for (final e in budget.entries) {
+    double spent = 0;
+    for (final t in transactions) {
+      if (t.type != TransactionType.deducted) continue;
+      final dt = _parseTransactionDate(t.date);
+      if (dt == null || dt.month != budget.month || dt.year != budget.year) continue;
+      if (!t.tagIds.contains(tagId)) continue;
+      final categoryId = _categoryNameToCategoryId(t.categoryName, categories);
+      if (categoryId != e.categoryId) continue;
+      final amt = _parseAmount(t.amount);
+      spent += amt < 0 ? -amt : amt;
+    }
+    result[e.categoryId] = spent;
+  }
+  return result;
+});
+
+/// Ensures the budget has one "Budget" tag (current month only). Recreates if missing. Call after save or when opening budget detail.
+Future<void> ensureBudgetTags(WidgetRef ref, MonthlyBudget budget) async {
+  final now = DateTime.now();
+  if (budget.month != now.month || budget.year != now.year) return;
+  final tagsNotifier = ref.read(tagsProvider.notifier);
+  final budgetsNotifier = ref.read(monthlyBudgetsProvider.notifier);
+  final tags = ref.read(tagsProvider).value ?? [];
+  final tagIds = tags.map((e) => e.id).toSet();
+  String? budgetTagId = budget.budgetTagId;
+  if (budgetTagId == null || !tagIds.contains(budgetTagId)) {
+    budgetTagId = tagsNotifier.nextId();
+    final tag = TagItem(
+      id: budgetTagId,
+      name: 'Budget',
+      budgetId: budget.id,
+    );
+    await tagsNotifier.add(tag);
+    final newBudget = MonthlyBudget(
+      id: budget.id,
+      month: budget.month,
+      year: budget.year,
+      regularIncome: budget.regularIncome,
+      entries: budget.entries,
+      budgetTagId: budgetTagId,
+    );
+    await budgetsNotifier.replaceById(budget.id, newBudget);
+  }
+  // Migrate away from old per-entry tags: delete any entry.tagId tags and clear them
+  final hasOldEntryTags = budget.entries.any((e) => e.tagId != null);
+  if (hasOldEntryTags) {
+    for (final e in budget.entries) {
+      if (e.tagId != null) await tagsNotifier.remove(e.tagId!);
+    }
+    final newEntries = budget.entries.map((e) => BudgetCategoryEntry(
+      categoryId: e.categoryId,
+      categoryName: e.categoryName,
+      emoji: e.emoji,
+      budgetAmount: e.budgetAmount,
+      tagId: null,
+    )).toList();
+    final newBudget = MonthlyBudget(
+      id: budget.id,
+      month: budget.month,
+      year: budget.year,
+      regularIncome: budget.regularIncome,
+      entries: newEntries,
+      budgetTagId: budget.budgetTagId ?? budgetTagId,
+    );
+    await budgetsNotifier.replaceById(budget.id, newBudget);
+  }
+}
+
+/// Deletes the budget tag for past-month budgets. Call when budgets screen loads.
+Future<void> cleanupPastMonthBudgetTags(WidgetRef ref) async {
+  final now = DateTime.now();
+  final budgets = ref.read(monthlyBudgetsProvider).value ?? [];
+  final tagsNotifier = ref.read(tagsProvider.notifier);
+  final budgetsNotifier = ref.read(monthlyBudgetsProvider.notifier);
+  for (final b in budgets) {
+    if (b.year < now.year || (b.year == now.year && b.month < now.month)) {
+      if (b.budgetTagId == null) continue;
+      await tagsNotifier.remove(b.budgetTagId!);
+      final newBudget = MonthlyBudget(
+        id: b.id,
+        month: b.month,
+        year: b.year,
+        regularIncome: b.regularIncome,
+        entries: b.entries,
+        budgetTagId: null,
+      );
+      await budgetsNotifier.replaceById(b.id, newBudget);
+    }
+  }
+}
+
 // --- Categories ---
 
 List<TransactionCategory> _seedCategories() {

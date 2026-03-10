@@ -11,11 +11,14 @@ const Color _kBorderGrey = Color(0xFFE5E5EA);
 /// Tags list: manage (add/edit/remove) and optionally choose tags for a transaction.
 /// When [onDone] is non-null, [initialSelectedIds] are pre-selected and a Done
 /// button returns the selected tag IDs.
+/// When [selectedCategoryId] is set (e.g. from add transaction), the Budget tag
+/// is only shown if that category is in the current month's budget.
 class TagsScreen extends ConsumerStatefulWidget {
   const TagsScreen({
     super.key,
     this.initialSelectedIds = const [],
     this.onDone,
+    this.selectedCategoryId,
   });
 
   /// Pre-selected tag IDs when in choose mode.
@@ -23,6 +26,9 @@ class TagsScreen extends ConsumerStatefulWidget {
 
   /// If set, screen is in "choose" mode: show checkboxes and Done returns selected IDs.
   final void Function(List<String> selectedIds)? onDone;
+
+  /// When in choose mode, the Budget tag is only shown if this category is in the current month's budget.
+  final String? selectedCategoryId;
 
   bool get _chooseMode => onDone != null;
 
@@ -130,7 +136,17 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
       ),
       body: tagsAsync.when(
         data: (tags) {
-          if (tags.isEmpty) {
+          List<TagItem> displayTags = tags;
+          if (widget._chooseMode) {
+            final currentBudget = ref.watch(currentMonthBudgetProvider);
+            displayTags = tags.where((tag) {
+              if (tag.budgetId == null) return true;
+              if (currentBudget == null || tag.budgetId != currentBudget.id) return false;
+              if (widget.selectedCategoryId == null) return true;
+              return currentBudget.entries.any((e) => e.categoryId == widget.selectedCategoryId);
+            }).toList();
+          }
+          if (displayTags.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -163,9 +179,9 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
           }
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            itemCount: tags.length,
+            itemCount: displayTags.length,
             itemBuilder: (context, index) {
-              final tag = tags[index];
+              final tag = displayTags[index];
               final selected = _selectedIds.contains(tag.id);
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -180,7 +196,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
                   child: InkWell(
                     onTap: widget._chooseMode
                         ? () => _toggle(tag.id)
-                        : () => _openEditTag(tag),
+                        : (tag.budgetId != null ? null : () => _openEditTag(tag)),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -202,16 +218,44 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
                             const SizedBox(width: 12),
                           ],
                           Expanded(
-                            child: Text(
-                              tag.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: _kTextDark,
-                              ),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    tag.name,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: _kTextDark,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (tag.budgetId != null && tag.name != 'Budget') ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'Budget',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          if (!widget._chooseMode) ...[
+                          if (!widget._chooseMode && tag.budgetId == null) ...[
                             IconButton(
                               icon: Icon(
                                 Icons.edit_outlined,

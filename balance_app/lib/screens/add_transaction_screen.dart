@@ -1093,6 +1093,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             builder: (context) => TagsScreen(
               initialSelectedIds: _selectedTagIds,
               onDone: (_) {},
+              selectedCategoryId: _selectedCategory?.id,
             ),
           ),
         );

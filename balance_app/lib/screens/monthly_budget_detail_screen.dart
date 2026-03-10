@@ -13,10 +13,17 @@ const Color _kBorderGrey = Color(0xFFE5E5EA);
 
 /// Detail view for a monthly budget: remaining circle, category breakdown. Matches app theme.
 /// Archived (past month) budgets are view-only: no edit or delete.
-class MonthlyBudgetDetailScreen extends ConsumerWidget {
+class MonthlyBudgetDetailScreen extends ConsumerStatefulWidget {
   const MonthlyBudgetDetailScreen({super.key, required this.budget});
 
   final MonthlyBudget budget;
+
+  @override
+  ConsumerState<MonthlyBudgetDetailScreen> createState() => _MonthlyBudgetDetailScreenState();
+}
+
+class _MonthlyBudgetDetailScreenState extends ConsumerState<MonthlyBudgetDetailScreen> {
+  bool _ensureTagsScheduled = false;
 
   static bool _isArchived(MonthlyBudget b) {
     final now = DateTime.now();
@@ -37,10 +44,18 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final budget = widget.budget;
+    final ref = this.ref;
+    if (!_isArchived(budget) && !_ensureTagsScheduled) {
+      _ensureTagsScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ensureBudgetTags(ref, budget);
+      });
+    }
     final currencyCode = ref.watch(selectedCurrencyCodeProvider);
     final spendingByCategory = ref.watch(
-      monthlySpendingByCategoryProvider((budget.month, budget.year)),
+      budgetSpendingByEntryProvider(budget.id),
     );
     final totalSpent = spendingByCategory.values.fold<double>(0, (a, b) => a + b);
     final media = MediaQuery.of(context);
@@ -97,7 +112,7 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _legendChip(
-                        'Spent in ${budget.monthYearLabel}',
+                        'Spent in ${widget.budget.monthYearLabel}',
                         formatAmountWithCurrency(totalSpent, currencyCode),
                         const Color(0xFFE53935),
                       ),
@@ -165,13 +180,17 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
       ),
     );
     if (confirmed == true && context.mounted) {
+      final tagsNotifier = ref.read(tagsProvider.notifier);
+      if (budget.budgetTagId != null) {
+        await tagsNotifier.remove(budget.budgetTagId!);
+      }
       await ref.read(monthlyBudgetsProvider.notifier).remove(budget.id);
       if (context.mounted) Navigator.of(context).pop(true);
     }
   }
 
   Widget _noIncomeSummaryCard(BuildContext context, double padding, String currencyCode, double totalSpent, bool isNarrow) {
-    final totalBudgeted = budget.totalBudgeted;
+    final totalBudgeted = widget.budget.totalBudgeted;
     return Container(
       padding: EdgeInsets.all(isNarrow ? 16 : 24),
       decoration: BoxDecoration(
@@ -194,7 +213,7 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
               SizedBox(width: isNarrow ? 8 : 12),
               Expanded(
                 child: _legendChip(
-                  'Spent in ${budget.monthYearLabel}',
+                  'Spent in ${widget.budget.monthYearLabel}',
                   formatAmountWithCurrency(totalSpent, currencyCode),
                   const Color(0xFFE53935),
                 ),
@@ -234,7 +253,7 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
           Icon(Icons.calendar_today_rounded, size: 20, color: _kTextDark),
           const SizedBox(width: 12),
           Text(
-            budget.monthYearLabel,
+            widget.budget.monthYearLabel,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -313,9 +332,9 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _legendChip('Income', formatAmountWithCurrency(budget.regularIncome, currencyCode),
+              _legendChip('Income', formatAmountWithCurrency(widget.budget.regularIncome, currencyCode),
                   Colors.grey),
-              _legendChip('Budgeted', formatAmountWithCurrency(budget.totalBudgeted, currencyCode),
+              _legendChip('Budgeted', formatAmountWithCurrency(widget.budget.totalBudgeted, currencyCode),
                   _kTextDark),
             ],
           ),
@@ -370,7 +389,7 @@ class MonthlyBudgetDetailScreen extends ConsumerWidget {
   }
 
   Widget _categoryCharts(BuildContext context, double padding, String currencyCode, [Map<String, double> spendingByCategory = const {}]) {
-    final entries = budget.entries;
+    final entries = widget.budget.entries;
     final width = MediaQuery.sizeOf(context).width;
     final isNarrow = width < 360;
     final crossAxisCount = isNarrow ? 2 : 3;

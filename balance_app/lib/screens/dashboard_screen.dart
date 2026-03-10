@@ -35,6 +35,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   bool _isLoading = false;
   bool _hasMore = true;
   int _page = 0;
+  int _lastKnownTransactionCount = -1;
   bool _balanceVisible = false;
   late AnimationController _drawerController;
   late Animation<double> _drawerAnimation;
@@ -126,6 +127,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final accountsAsync = ref.watch(accountsProvider);
     final balance = ref.watch(balanceProvider);
     final accountTotals = ref.watch(accountTotalsProvider);
+    final allTransactions = transactionsAsync.value ?? [];
+    if (_lastKnownTransactionCount >= 0 && allTransactions.length != _lastKnownTransactionCount) {
+      final newCount = allTransactions.length;
+      _lastKnownTransactionCount = newCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _displayedTransactions.clear();
+          _page = 0;
+          _hasMore = newCount > 0;
+          _isLoading = false;
+        });
+        _loadMore();
+      });
+    } else if (_lastKnownTransactionCount < 0 && allTransactions.isNotEmpty) {
+      _lastKnownTransactionCount = allTransactions.length;
+    }
     // Initial load: only when we have data, nothing displayed yet, and we still expect more (avoids re-triggering when list is empty).
     if (transactionsAsync.value != null && _displayedTransactions.isEmpty && _page == 0 && !_isLoading && _hasMore) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

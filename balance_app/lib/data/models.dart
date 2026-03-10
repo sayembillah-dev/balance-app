@@ -73,21 +73,26 @@ class TagItem {
     required this.id,
     required this.name,
     this.colorHex,
+    this.budgetId,
   });
   final String id;
   final String name;
   /// Optional color as hex string (e.g. "FF5733").
   final String? colorHex;
+  /// When non-null, this tag was auto-created for that budget.
+  final String? budgetId;
 
   TagItem copyWith({
     String? id,
     String? name,
     String? colorHex,
+    String? budgetId,
   }) {
     return TagItem(
       id: id ?? this.id,
       name: name ?? this.name,
       colorHex: colorHex ?? this.colorHex,
+      budgetId: budgetId ?? this.budgetId,
     );
   }
 
@@ -95,6 +100,7 @@ class TagItem {
         'id': id,
         'name': name,
         'colorHex': colorHex,
+        'budgetId': budgetId,
       };
 
   static TagItem fromJson(Map<String, dynamic> json) {
@@ -102,6 +108,7 @@ class TagItem {
       id: json['id'] as String,
       name: json['name'] as String,
       colorHex: json['colorHex'] as String?,
+      budgetId: json['budgetId'] as String?,
     );
   }
 }
@@ -163,17 +170,21 @@ class BudgetCategoryEntry {
     required this.categoryName,
     required this.emoji,
     required this.budgetAmount,
+    this.tagId,
   });
   final String categoryId;
   final String categoryName;
   final String emoji;
   final double budgetAmount;
+  /// Auto-created tag id for this budget entry (current month only).
+  final String? tagId;
 
   Map<String, dynamic> toJson() => {
         'categoryId': categoryId,
         'categoryName': categoryName,
         'emoji': emoji,
         'budgetAmount': budgetAmount,
+        'tagId': tagId,
       };
 
   static BudgetCategoryEntry fromJson(Map<String, dynamic> json) {
@@ -182,6 +193,7 @@ class BudgetCategoryEntry {
       categoryName: json['categoryName'] as String,
       emoji: json['emoji'] as String,
       budgetAmount: (json['budgetAmount'] as num).toDouble(),
+      tagId: json['tagId'] as String?,
     );
   }
 }
@@ -193,12 +205,15 @@ class MonthlyBudget {
     required this.year,
     required this.regularIncome,
     required this.entries,
+    this.budgetTagId,
   });
   final String id;
   final int month;
   final int year;
   final double regularIncome;
   final List<BudgetCategoryEntry> entries;
+  /// Single auto-created "Budget" tag id for this budget (current month only). All entries share it.
+  final String? budgetTagId;
 
   double get totalBudgeted =>
       entries.fold(0.0, (sum, e) => sum + e.budgetAmount);
@@ -216,6 +231,7 @@ class MonthlyBudget {
         'year': year,
         'regularIncome': regularIncome,
         'entries': entries.map((e) => e.toJson()).toList(),
+        'budgetTagId': budgetTagId,
       };
 
   static MonthlyBudget fromJson(Map<String, dynamic> json) {
@@ -227,6 +243,7 @@ class MonthlyBudget {
       entries: (json['entries'] as List<dynamic>)
           .map((e) => BudgetCategoryEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
+      budgetTagId: json['budgetTagId'] as String?,
     );
   }
 }

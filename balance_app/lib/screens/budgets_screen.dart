@@ -20,6 +20,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _drawerController;
   late Animation<double> _drawerAnimation;
+  bool _cleanupScheduled = false;
 
   @override
   void initState() {
@@ -45,6 +46,12 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!_cleanupScheduled) {
+      _cleanupScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        cleanupPastMonthBudgetTags(ref);
+      });
+    }
     final media = MediaQuery.of(context);
     final width = media.size.width;
     final isNarrow = width < 360;
