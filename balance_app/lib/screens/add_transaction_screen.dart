@@ -153,12 +153,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
       }
     }
     final currencyCode = ref.read(selectedCurrencyCodeProvider);
-    final categoryName =
-        _selectedSubcategory?.name ??
-        _selectedCategory?.name ??
-        'Uncategorized';
-    final emoji =
-        _selectedSubcategory?.emoji ?? _selectedCategory?.emoji ?? '📌';
+    final categoryName = isTransfer
+        ? 'Transfer'
+        : (_selectedSubcategory?.name ??
+            _selectedCategory?.name ??
+            'Uncategorized');
+    final emoji = isTransfer
+        ? '💸'
+        : (_selectedSubcategory?.emoji ?? _selectedCategory?.emoji ?? '📌');
     TransactionType type;
     String amountDisplay;
     String? accountId;
@@ -209,24 +211,108 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
         ? null
         : _descriptionController.text.trim();
     final notifier = ref.read(transactionsProvider.notifier);
-    final id = widget.editFrom != null
-        ? widget.editFrom!.id
-        : notifier.nextId();
-    final item = TransactionItem(
-      id: id,
-      categoryName: categoryName,
-      description: description,
-      emoji: emoji,
-      amount: amountDisplay,
-      type: type,
-      date: dateStr,
-      time: timeStr,
-      accountId: accountId,
-    );
-    if (widget.editFrom != null) {
-      await notifier.replaceById(widget.editFrom!.id, item);
+    if (isTransfer) {
+      final list = ref.read(transactionsProvider).value ?? [];
+      final editingTransfer =
+          widget.editFrom != null && widget.editFrom!.transferPairId != null;
+      TransactionItem? otherLeg;
+      if (editingTransfer) {
+        for (final t in list) {
+          if (t.transferPairId == widget.editFrom!.transferPairId &&
+              t.id != widget.editFrom!.id) {
+            otherLeg = t;
+            break;
+          }
+        }
+      }
+      if (editingTransfer && otherLeg != null) {
+        // Edit transfer: replace both legs.
+        final outId = widget.editFrom!.amount.trimLeft().startsWith('-')
+            ? widget.editFrom!.id
+            : otherLeg.id;
+        final inId = widget.editFrom!.amount.trimLeft().startsWith('-')
+            ? otherLeg.id
+            : widget.editFrom!.id;
+        final pairId = widget.editFrom!.transferPairId!;
+        await notifier.replaceById(
+          outId,
+          TransactionItem(
+            id: outId,
+            categoryName: categoryName,
+            description: description,
+            emoji: emoji,
+            amount: formatAmountWithCurrency(-amount, currencyCode),
+            type: TransactionType.transferred,
+            date: dateStr,
+            time: timeStr,
+            accountId: _selectedFromAccount?.id,
+            transferPairId: pairId,
+          ),
+        );
+        await notifier.replaceById(
+          inId,
+          TransactionItem(
+            id: inId,
+            categoryName: categoryName,
+            description: description,
+            emoji: emoji,
+            amount: formatAmountWithCurrency(amount, currencyCode),
+            type: TransactionType.transferred,
+            date: dateStr,
+            time: timeStr,
+            accountId: _selectedToAccount?.id,
+            transferPairId: pairId,
+          ),
+        );
+      } else {
+        // New transfer: save two legs (out from source account, in to destination account).
+        final idOut = notifier.nextId();
+        await notifier.add(TransactionItem(
+          id: idOut,
+          categoryName: categoryName,
+          description: description,
+          emoji: emoji,
+          amount: formatAmountWithCurrency(-amount, currencyCode),
+          type: TransactionType.transferred,
+          date: dateStr,
+          time: timeStr,
+          accountId: _selectedFromAccount?.id,
+          transferPairId: idOut,
+        ));
+        final idIn = notifier.nextId();
+        await notifier.add(TransactionItem(
+          id: idIn,
+          categoryName: categoryName,
+          description: description,
+          emoji: emoji,
+          amount: formatAmountWithCurrency(amount, currencyCode),
+          type: TransactionType.transferred,
+          date: dateStr,
+          time: timeStr,
+          accountId: _selectedToAccount?.id,
+          transferPairId: idOut,
+        ));
+      }
     } else {
-      await notifier.add(item);
+      final id = widget.editFrom != null
+          ? widget.editFrom!.id
+          : notifier.nextId();
+      final item = TransactionItem(
+        id: id,
+        categoryName: categoryName,
+        description: description,
+        emoji: emoji,
+        amount: amountDisplay,
+        type: type,
+        date: dateStr,
+        time: timeStr,
+        accountId: accountId,
+      );
+      if (widget.editFrom != null) {
+        await notifier.replaceById(widget.editFrom!.id, item);
+      } else {
+        await notifier.add(item);
+      }
     }
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -465,6 +551,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
       } catch (_) {}
     }
     if (account == null && accounts.isNotEmpty) account = accounts.first;
+    AccountItem? fromAcc;
+    AccountItem? toAcc;
+    if (targetTab == 2 && item.transferPairId != null) {
+      final list = ref.read(transactionsProvider).value ?? [];
+      for (final t in list) {
+        if (t.transferPairId == item.transferPairId && t.id != item.id) {
+          try {
+            final otherAccount = accounts.firstWhere((a) => a.id == t.accountId);
+            if (t.amount.trimLeft().startsWith('-')) {
+              fromAcc = otherAccount;
+              toAcc = account;
+            } else {
+              fromAcc = account;
+              toAcc = otherAccount;
+            }
+          } catch (_) {}
+          break;
+        }
+      }
+      fromAcc ??= account;
+      toAcc ??= accounts.length > 1 ? accounts[1] : account;
+    }
     final dt = _parseStoredDate(item.date);
     setState(() {
       _amountController.text = amount;
@@ -474,9 +582,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
       _selectedCategory = cat;
       _selectedSubcategory = sub;
       _selectedAccount = account;
-      _selectedFromAccount = _selectedFromAccount ?? account;
-      _selectedToAccount =
-          _selectedToAccount ?? (accounts.length > 1 ? accounts[1] : account);
+      if (targetTab == 2 && fromAcc != null && toAcc != null) {
+        _selectedFromAccount = fromAcc;
+        _selectedToAccount = toAcc;
+      } else {
+        _selectedFromAccount = _selectedFromAccount ?? account;
+        _selectedToAccount =
+            _selectedToAccount ?? (accounts.length > 1 ? accounts[1] : account);
+      }
     });
     _tabController.animateTo(targetTab);
   }

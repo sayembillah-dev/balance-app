@@ -17,6 +17,38 @@ Future<void> showTransactionDetailSheet(BuildContext context, TransactionItem it
   );
 }
 
+/// For a transfer transaction, returns [From account] and [To account] rows.
+List<Widget> _transferAccountRows(
+  TransactionItem item,
+  List<TransactionItem> transactions,
+  List<AccountItem> accounts,
+) {
+  String fromName = '—';
+  String toName = '—';
+  if (item.transferPairId != null) {
+    TransactionItem? other;
+    for (final t in transactions) {
+      if (t.transferPairId == item.transferPairId && t.id != item.id) {
+        other = t;
+        break;
+      }
+    }
+    if (other != null) {
+      final fromId = item.amount.trimLeft().startsWith('-') ? item.accountId : other.accountId;
+      final toId = item.amount.trimLeft().startsWith('-') ? other.accountId : item.accountId;
+      for (final a in accounts) {
+        if (a.id == fromId) fromName = a.name;
+        if (a.id == toId) toName = a.name;
+      }
+    }
+  }
+  return [
+    _DetailRow(label: 'From account', value: fromName),
+    const SizedBox(height: 12),
+    _DetailRow(label: 'To account', value: toName),
+  ];
+}
+
 /// Content of the transaction detail bottom sheet.
 class _TransactionDetailSheetContent extends ConsumerWidget {
   const _TransactionDetailSheetContent({required this.item, required this.parentContext});
@@ -31,6 +63,8 @@ class _TransactionDetailSheetContent extends ConsumerWidget {
     final isNarrow = width < 360;
     final horizontalPadding = _horizontalPadding(width);
     final bottomPadding = media.padding.bottom;
+    final transactions = ref.watch(transactionsProvider).value ?? [];
+    final accounts = ref.watch(accountsProvider).value ?? [];
 
     return Container(
       constraints: BoxConstraints(maxHeight: media.size.height * 0.85),
@@ -92,11 +126,18 @@ class _TransactionDetailSheetContent extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             alignment: Alignment.center,
-                            child: Text(item.emoji, style: TextStyle(fontSize: isNarrow ? 32 : 36)),
+                            child: Text(
+                              item.type == TransactionType.transferred ? '💸' : item.emoji,
+                              style: TextStyle(fontSize: isNarrow ? 32 : 36),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _DetailRow(label: 'Category', value: item.categoryName),
+                        if (item.type == TransactionType.transferred) ...[
+                          ..._transferAccountRows(item, transactions, accounts),
+                        ] else ...[
+                          _DetailRow(label: 'Category', value: item.categoryName),
+                        ],
                         if (item.description != null && item.description!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _DetailRow(label: 'Description', value: item.description!),
@@ -227,11 +268,12 @@ class _TransactionDetailSheetContent extends ConsumerWidget {
   static Future<void> _onDelete(BuildContext context, TransactionItem item, BuildContext parentContext) async {
     final currencyCode = ProviderScope.containerOf(parentContext).read(selectedCurrencyCodeProvider);
     final formattedAmount = formatStoredAmountWithCurrency(item.amount, currencyCode);
+    final label = item.type == TransactionType.transferred ? 'Transfer' : item.categoryName;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete transaction?'),
-        content: Text('${item.categoryName} – $formattedAmount will be removed.'),
+        content: Text('$label – $formattedAmount will be removed.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
           FilledButton(
@@ -305,11 +347,18 @@ class TransactionDetailScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             alignment: Alignment.center,
-                            child: Text(item.emoji, style: TextStyle(fontSize: isNarrow ? 32 : 36)),
+                            child: Text(
+                              item.type == TransactionType.transferred ? '💸' : item.emoji,
+                              style: TextStyle(fontSize: isNarrow ? 32 : 36),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _DetailRow(label: 'Category', value: item.categoryName),
+                        if (item.type == TransactionType.transferred) ...[
+                          ..._transferAccountRows(item, ref.watch(transactionsProvider).value ?? [], ref.watch(accountsProvider).value ?? []),
+                        ] else ...[
+                          _DetailRow(label: 'Category', value: item.categoryName),
+                        ],
                         if (item.description != null && item.description!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _DetailRow(label: 'Description', value: item.description!),
@@ -444,7 +493,7 @@ class TransactionDetailScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete transaction?'),
         content: Text(
-          '${item.categoryName} – $formattedAmount will be removed.',
+          '${item.type == TransactionType.transferred ? "Transfer" : item.categoryName} – $formattedAmount will be removed.',
         ),
         actions: [
           TextButton(

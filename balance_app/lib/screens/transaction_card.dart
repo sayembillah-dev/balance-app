@@ -53,19 +53,19 @@ class TransactionListRow extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  item.emoji,
+                  item.type == TransactionType.transferred ? '💸' : item.emoji,
                   style: TextStyle(fontSize: isNarrow ? 22 : 24),
                 ),
               ),
               SizedBox(width: isNarrow ? 14 : 16),
-              // Category name + description (left-aligned, stacked)
+              // Category name + description (left-aligned, stacked); show "Transfer" for transfers
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      item.categoryName,
+                      item.type == TransactionType.transferred ? 'Transfer' : item.categoryName,
                       style: const TextStyle(
                         color: Color(0xFF1C1C1E),
                         fontSize: 15,

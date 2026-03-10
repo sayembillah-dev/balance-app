@@ -101,16 +101,10 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
     }
   }
 
-  static double _parseAmountSigned(String amountStr) {
-    final cleaned = amountStr.replaceAll(RegExp(r'[^\d.-]'), '').trim();
-    final v = double.tryParse(cleaned);
-    return v ?? 0;
-  }
-
   double _balance(AccountItem acc, List<TransactionItem> transactions) {
     double sum = acc.initialBalance;
     for (final t in transactions.where((t) => t.accountId == acc.id)) {
-      sum += _parseAmountSigned(t.amount);
+      sum += getTransactionEffectiveAmount(t);
     }
     return sum;
   }
@@ -189,6 +183,8 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
     final filtered = _filteredCache;
     final endIndex = ((_page + 1) * _pageSize).clamp(0, filtered.length);
     final displayed = filtered.sublist(0, endIndex);
+    final initialBalanceRowIndex = displayed.length; // last row
+    final totalRows = 1 + displayed.length + (_isLoading ? _pageSize : 0);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -257,98 +253,104 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                 ),
               ),
               Expanded(
-                child: displayed.isEmpty && !_isLoading
-                    ? const SizedBox.shrink()
-                    : ListView.builder(
+                child: ListView.builder(
               controller: _scrollController,
               padding: EdgeInsets.only(left: padding, right: padding, bottom: 20 + media.padding.bottom),
-              itemCount: displayed.length + (_isLoading ? _pageSize : 0),
+              itemCount: totalRows,
               itemBuilder: (context, index) {
-                if (index >= displayed.length) {
-                  return TransactionSkeletonRow(isNarrow: isNarrow);
-                }
-                final item = displayed[index];
-                return Dismissible(
-                  key: ValueKey(item.id),
-                  background: Container(
-                    color: const Color(0xFFFF3B30),
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.only(left: 20),
-                    child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
-                  ),
-                  secondaryBackground: Container(
-                    color: Colors.blue,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.edit_rounded, color: Colors.white, size: 28),
-                  ),
-                  confirmDismiss: (direction) async {
-                    if (direction == DismissDirection.endToStart) {
-                      return await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete transaction?'),
-                          content: Text('${item.categoryName} – ${formatStoredAmountWithCurrency(item.amount, ref.watch(selectedCurrencyCodeProvider))}'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                            FilledButton(onPressed: () => Navigator.of(ctx).pop(true), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF3B30)), child: const Text('Delete')),
-                          ],
-                        ),
-                      );
-                    }
-                    if (direction == DismissDirection.startToEnd) {
-                      showTransactionDetailSheet(context, item).then((_) {
-                        if (mounted) setState(() {});
-                      });
-                      return false;
-                    }
-                    return false;
-                  },
-                  onDismissed: (direction) {
-                    if (direction == DismissDirection.endToStart) {
-                      ref.read(transactionsProvider.notifier).removeById(item.id);
-                      setState(() {});
-                    }
-                  },
-                  child: Column(
+                if (index == initialBalanceRowIndex) {
+                  return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TransactionListRow(
-                        item: item,
+                      _InitialBalanceRow(
+                        initialBalance: acc.initialBalance,
                         isNarrow: isNarrow,
-                        displayAmount: formatStoredAmountWithCurrency(item.amount, ref.watch(selectedCurrencyCodeProvider)),
-                        onTap: () {
-                          showTransactionDetailSheet(context, item).then((_) {
-                            if (mounted) setState(() {});
-                          });
-                        },
+                        currencyCode: ref.watch(selectedCurrencyCodeProvider),
                       ),
                       Divider(height: 1, thickness: 1, color: const Color(0xFFE8E8ED), indent: isNarrow ? 56 : 62),
                     ],
-                  ),
+                  );
+                }
+                if (index > initialBalanceRowIndex) {
+                  return TransactionSkeletonRow(isNarrow: isNarrow);
+                }
+                final item = displayed[index];
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TransactionListRow(
+                      item: item,
+                      isNarrow: isNarrow,
+                      displayAmount: formatStoredAmountWithCurrency(item.amount, ref.watch(selectedCurrencyCodeProvider)),
+                      onTap: () {
+                        showTransactionDetailSheet(context, item).then((_) {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                    ),
+                    Divider(height: 1, thickness: 1, color: const Color(0xFFE8E8ED), indent: isNarrow ? 56 : 62),
+                  ],
                 );
               },
             ),
           ),
         ],
       ),
-          if (displayed.isEmpty && !_isLoading)
-            Positioned.fill(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(padding * 1.5),
-                  child: Text(
-                    "This account hasn't been touched yet :)",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: isNarrow ? 15 : 16,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                  ),
-                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InitialBalanceRow extends StatelessWidget {
+  const _InitialBalanceRow({
+    required this.initialBalance,
+    required this.isNarrow,
+    required this.currencyCode,
+  });
+
+  final double initialBalance;
+  final bool isNarrow;
+  final String currencyCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: isNarrow ? 12 : 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: isNarrow ? 42 : 46,
+            height: isNarrow ? 42 : 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Text('🏦', style: TextStyle(fontSize: 22)),
+          ),
+          SizedBox(width: isNarrow ? 14 : 16),
+          const Expanded(
+            child: Text(
+              'Initial balance',
+              style: TextStyle(
+                color: Color(0xFF1C1C1E),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+          Text(
+            formatAmountWithCurrency(initialBalance, currencyCode),
+            style: TextStyle(
+              fontSize: isNarrow ? 15 : 16,
+              fontWeight: FontWeight.w600,
+              color: initialBalance >= 0
+                  ? const Color.fromARGB(255, 1, 197, 50)
+                  : const Color.fromARGB(255, 208, 12, 1),
+            ),
+          ),
         ],
       ),
     );

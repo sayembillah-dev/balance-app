@@ -265,6 +265,7 @@ class TransactionItem {
     required this.date,
     required this.time,
     this.accountId,
+    this.transferPairId,
   });
   final String id;
   final String categoryName;
@@ -275,6 +276,8 @@ class TransactionItem {
   final String date;
   final String time;
   final String? accountId;
+  /// When non-null, this transaction is one leg of a transfer; the other leg shares the same id.
+  final String? transferPairId;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -286,6 +289,7 @@ class TransactionItem {
         'date': date,
         'time': time,
         'accountId': accountId,
+        'transferPairId': transferPairId,
       };
 
   static TransactionItem fromJson(Map<String, dynamic> json) {
@@ -299,6 +303,7 @@ class TransactionItem {
       date: json['date'] as String,
       time: json['time'] as String,
       accountId: json['accountId'] as String?,
+      transferPairId: json['transferPairId'] as String?,
     );
   }
 }

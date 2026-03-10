@@ -750,7 +750,7 @@ class _AccountCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                totals?.monthExpense ?? item.monthExpense,
+                                totals?.monthIncome ?? item.monthIncome,
                                 style: TextStyle(
                                   color: const Color(0xFF1C1C1E),
                                   fontSize: amountSize,
@@ -759,7 +759,7 @@ class _AccountCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.arrow_downward_rounded,
+                                Icons.arrow_upward_rounded,
                                 size: iconSize,
                                 color: const Color(0xFF34C759),
                               ),
@@ -771,7 +771,7 @@ class _AccountCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                totals?.monthIncome ?? item.monthIncome,
+                                totals?.monthExpense ?? item.monthExpense,
                                 style: TextStyle(
                                   color: const Color(0xFF1C1C1E),
                                   fontSize: amountSize,
@@ -780,7 +780,7 @@ class _AccountCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.arrow_upward_rounded,
+                                Icons.arrow_downward_rounded,
                                 size: iconSize,
                                 color: const Color(0xFFFF3B30),
                               ),

@@ -96,7 +96,18 @@ class TransactionsNotifier extends AsyncNotifier<List<TransactionItem>> {
 
   Future<void> removeById(String id) async {
     final list = state.value ?? [];
-    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    final idsToRemove = <String>{id};
+    TransactionItem? removed;
+    for (final e in list) {
+      if (e.id == id) { removed = e; break; }
+    }
+    if (removed?.transferPairId != null) {
+      final pairId = removed!.transferPairId!;
+      for (final t in list) {
+        if (t.transferPairId == pairId && t.id != id) idsToRemove.add(t.id);
+      }
+    }
+    state = AsyncValue.data(list.where((e) => !idsToRemove.contains(e.id)).toList());
     await saveTransactions(state.value!);
   }
 
@@ -326,6 +337,21 @@ double _parseAmount(String amount) {
   return neg ? -v : v;
 }
 
+/// Returns the effective amount for balance/totals: sign from transaction type so
+/// deducted = negative, added = positive, transferred = use stored sign (each leg stored correctly).
+double getTransactionEffectiveAmount(TransactionItem t) {
+  final parsed = _parseAmount(t.amount);
+  final abs = parsed.abs();
+  switch (t.type) {
+    case TransactionType.deducted:
+      return -abs;
+    case TransactionType.added:
+      return abs;
+    case TransactionType.transferred:
+      return parsed; // each leg stored with correct sign
+  }
+}
+
 final balanceProvider = Provider<String>((ref) {
   final accountsAsync = ref.watch(accountsProvider);
   final transactionsAsync = ref.watch(transactionsProvider);
@@ -337,7 +363,7 @@ final balanceProvider = Provider<String>((ref) {
     total += a.initialBalance;
   }
   for (final t in transactionsList) {
-    total += _parseAmount(t.amount);
+    total += getTransactionEffectiveAmount(t);
   }
   return formatAmountWithCurrency(total, currencyCode);
 });
@@ -365,7 +391,7 @@ final accountTotalsProvider = Provider<Map<String, AccountTotals>>((ref) {
       if (t.accountId != a.id) { continue; }
       final dt = _parseTransactionDate(t.date);
       if (dt == null || dt.year != now.year || dt.month != now.month) { continue; }
-      final amt = _parseAmount(t.amount);
+      final amt = getTransactionEffectiveAmount(t);
       if (amt < 0) {
         expense += -amt;
       } else {
