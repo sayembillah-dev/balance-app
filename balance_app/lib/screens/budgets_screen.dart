@@ -44,6 +44,78 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen>
   void _openDrawer() => _drawerController.forward();
   void _closeDrawer() => _drawerController.reverse();
 
+  void _showBudgetInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 10),
+            const Text('About Budgets'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'What is Budget?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Budgets help you plan how much to spend each month by category (e.g. Shopping, Food & Dining, Transport). You set an amount per category and track spending against it.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'How it works',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '• Create a monthly budget: choose a month, enter your income, then add at least 3 categories with budget amounts.\n\n'
+                '• A single "Budget" tag is created for the current month. When you add a transaction, tag it with "Budget" (only shown for categories in your budget) so it counts toward that category\'s spending.\n\n'
+                '• The budget detail view shows how much you\'ve spent per category vs your limit. Only transactions that have the Budget tag and match the category are counted.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Instructions',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '1. Tap + to create a new budget (pick month, income, then categories and amounts).\n\n'
+                '2. Open a budget card to see spending per category and remaining amount.\n\n'
+                '3. When adding a transaction, choose a category that is in your budget, then tap "Choose tags" and add the "Budget" tag so it counts toward that budget.\n\n'
+                '4. Edit or delete a budget from its detail screen (current month only). Past months are view-only.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_cleanupScheduled) {
@@ -103,6 +175,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen>
                             ),
                           ),
                           actions: [
+                            IconButton(
+                              icon: const Icon(Icons.info_outline_rounded),
+                              onPressed: _showBudgetInfo,
+                              tooltip: 'About budgets',
+                            ),
                             IconButton(
                               icon: const Icon(Icons.menu_rounded),
                               onPressed: _openDrawer,

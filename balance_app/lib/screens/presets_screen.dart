@@ -40,6 +40,78 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen>
   void _openDrawer() => _drawerController.forward();
   void _closeDrawer() => _drawerController.reverse();
 
+  void _showPresetInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 10),
+            const Text('About Presets'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'What are Presets?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Presets are saved transaction templates. Instead of entering the same details every time (e.g. account, category, description), you create a preset once and apply it when adding a transaction to fill in the fields automatically.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'How it works',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '• Create a preset from this page (tap +) or save one when adding or editing a transaction.\n\n'
+                '• Each preset can store: transaction type (spend/income/transfer), account(s), category, subcategory, description, and optionally a default amount.\n\n'
+                '• When adding a transaction, you can pick a preset to pre-fill the form. You can still change any field before saving.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Instructions',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '1. Tap + to create a new preset. Set a name and the fields you want to reuse (category, account, etc.).\n\n'
+                '2. Tap a preset card here to use it: you\'ll go to Add Transaction with the preset applied.\n\n'
+                '3. When adding or editing a transaction, use "Save as preset" to create a preset from the current transaction.\n\n'
+                '4. Edit or delete a preset by tapping it, then use the edit or delete option on the edit screen.',
+                style: TextStyle(fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -93,6 +165,11 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen>
                             ),
                           ),
                           actions: [
+                            IconButton(
+                              icon: const Icon(Icons.info_outline_rounded),
+                              onPressed: _showPresetInfo,
+                              tooltip: 'About presets',
+                            ),
                             IconButton(
                               icon: const Icon(Icons.menu_rounded),
                               onPressed: _openDrawer,
