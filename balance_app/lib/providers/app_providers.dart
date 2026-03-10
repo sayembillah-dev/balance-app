@@ -327,6 +327,45 @@ final categoriesForPickerProvider = Provider<List<TransactionCategory>>((ref) {
   );
 });
 
+// --- Tags ---
+
+class TagsNotifier extends AsyncNotifier<List<TagItem>> {
+  @override
+  Future<List<TagItem>> build() async => await loadTags();
+
+  Future<void> add(TagItem tag) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data([...list, tag]);
+    await saveTags(state.value!);
+  }
+
+  Future<void> replaceById(String id, TagItem tag) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = tag;
+    state = AsyncValue.data(newList);
+    await saveTags(state.value!);
+  }
+
+  Future<void> remove(String id) async {
+    final list = state.value ?? [];
+    state = AsyncValue.data(list.where((e) => e.id != id).toList());
+    await saveTags(state.value!);
+    // Keep orphan references: transactions retain the tag id in tagIds.
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    final ids = list.map((e) => int.tryParse(e.id) ?? 0);
+    return ((ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b)) + 1).toString();
+  }
+}
+
+final tagsProvider =
+    AsyncNotifierProvider<TagsNotifier, List<TagItem>>(TagsNotifier.new);
+
 // --- Balance (computed from accounts + transactions) ---
 
 double _parseAmount(String amount) {

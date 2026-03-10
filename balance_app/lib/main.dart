@@ -16,6 +16,7 @@ import 'screens/budgets_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/server_try_screen.dart';
 import 'screens/pin_entry_screen.dart';
+import 'screens/tags_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: BalanceApp()));
@@ -49,6 +50,7 @@ class BalanceApp extends StatelessWidget {
         '/categories': (context) => const CategoriesScreen(),
         '/presets': (context) => const PresetsScreen(),
         '/budgets': (context) => const BudgetsScreen(),
+        '/tags': (context) => const TagsScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/pin': (context) => const PinEntryScreen(),
       },

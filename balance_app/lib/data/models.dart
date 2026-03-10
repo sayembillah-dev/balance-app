@@ -68,6 +68,44 @@ class SubcategoryItem {
   }
 }
 
+class TagItem {
+  const TagItem({
+    required this.id,
+    required this.name,
+    this.colorHex,
+  });
+  final String id;
+  final String name;
+  /// Optional color as hex string (e.g. "FF5733").
+  final String? colorHex;
+
+  TagItem copyWith({
+    String? id,
+    String? name,
+    String? colorHex,
+  }) {
+    return TagItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      colorHex: colorHex ?? this.colorHex,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'colorHex': colorHex,
+      };
+
+  static TagItem fromJson(Map<String, dynamic> json) {
+    return TagItem(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      colorHex: json['colorHex'] as String?,
+    );
+  }
+}
+
 class TransactionCategory {
   const TransactionCategory({
     required this.id,
@@ -266,6 +304,7 @@ class TransactionItem {
     required this.time,
     this.accountId,
     this.transferPairId,
+    this.tagIds = const [],
   });
   final String id;
   final String categoryName;
@@ -278,6 +317,8 @@ class TransactionItem {
   final String? accountId;
   /// When non-null, this transaction is one leg of a transfer; the other leg shares the same id.
   final String? transferPairId;
+  /// Tag IDs attached to this transaction.
+  final List<String> tagIds;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -290,9 +331,14 @@ class TransactionItem {
         'time': time,
         'accountId': accountId,
         'transferPairId': transferPairId,
+        'tagIds': tagIds,
       };
 
   static TransactionItem fromJson(Map<String, dynamic> json) {
+    final tagIdsRaw = json['tagIds'];
+    final tagIds = tagIdsRaw is List<dynamic>
+        ? tagIdsRaw.map((e) => e.toString()).toList()
+        : <String>[];
     return TransactionItem(
       id: json['id'] as String,
       categoryName: json['categoryName'] as String,
@@ -304,6 +350,7 @@ class TransactionItem {
       time: json['time'] as String,
       accountId: json['accountId'] as String?,
       transferPairId: json['transferPairId'] as String?,
+      tagIds: tagIds,
     );
   }
 }

@@ -11,6 +11,7 @@ const String _keyTransactions = 'transactions';
 const String _keyPresets = 'presets';
 const String _keyMonthlyBudgets = 'monthly_budgets';
 const String _keyCategories = 'categories';
+const String _keyTags = 'tags';
 const String _keySelectedCurrency = 'selected_currency';
 const String _keyChoseTryMode = 'chose_try_mode';
 const String _keyPinHash = 'pin_hash';
@@ -164,6 +165,30 @@ Future<List<TransactionCategory>> loadCategories() async {
     final list = jsonDecode(raw) as List<dynamic>;
     return list
         .map((e) => TransactionCategory.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Future<void> saveTags(List<TagItem> list) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setString(
+    _keyTags,
+    jsonEncode(list.map((e) => e.toJson()).toList()),
+  );
+}
+
+Future<List<TagItem>> loadTags() async {
+  final prefs = await _prefs();
+  if (prefs == null) return [];
+  final raw = prefs.getString(_keyTags);
+  if (raw == null) return [];
+  try {
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => TagItem.fromJson(e as Map<String, dynamic>))
         .toList();
   } catch (_) {
     return [];

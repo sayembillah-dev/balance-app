@@ -8,6 +8,7 @@ import '../widgets/app_drawer.dart';
 import 'transaction_card.dart';
 import 'transaction_detail_screen.dart';
 import 'transaction_skeleton.dart';
+import '../data/models.dart';
 
 /// List item for grouped list: either a section header or a transaction.
 class _ListEntry {
@@ -31,6 +32,7 @@ class _TransactionFilters {
   const _TransactionFilters({
     this.type,
     this.categoryNames,
+    this.tagIds,
     this.dateFrom,
     this.dateTo,
     this.amountMin,
@@ -39,6 +41,8 @@ class _TransactionFilters {
   final TransactionType? type;
   /// Non-null and non-empty = filter by these categories.
   final List<String>? categoryNames;
+  /// Non-null and non-empty = filter by these tag IDs (transaction has any).
+  final List<String>? tagIds;
   final DateTime? dateFrom;
   final DateTime? dateTo;
   final double? amountMin;
@@ -46,6 +50,7 @@ class _TransactionFilters {
   bool get hasAny =>
       type != null ||
       (categoryNames != null && categoryNames!.isNotEmpty) ||
+      (tagIds != null && tagIds!.isNotEmpty) ||
       dateFrom != null ||
       dateTo != null ||
       amountMin != null ||
@@ -53,10 +58,12 @@ class _TransactionFilters {
   _TransactionFilters copyWith({
     bool clearType = false,
     bool clearCategory = false,
+    bool clearTagIds = false,
     bool clearDate = false,
     bool clearAmount = false,
     TransactionType? type,
     List<String>? categoryNames,
+    List<String>? tagIds,
     DateTime? dateFrom,
     DateTime? dateTo,
     double? amountMin,
@@ -65,6 +72,7 @@ class _TransactionFilters {
     return _TransactionFilters(
       type: clearType ? null : (type ?? this.type),
       categoryNames: clearCategory ? null : (categoryNames ?? this.categoryNames),
+      tagIds: clearTagIds ? null : (tagIds ?? this.tagIds),
       dateFrom: clearDate ? null : (dateFrom ?? this.dateFrom),
       dateTo: clearDate ? null : (dateTo ?? this.dateTo),
       amountMin: clearAmount ? null : (amountMin ?? this.amountMin),
@@ -178,6 +186,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
     if (_filters.categoryNames != null && _filters.categoryNames!.isNotEmpty) {
       final names = _filters.categoryNames!.toSet();
       list = list.where((t) => names.contains(t.categoryName)).toList();
+    }
+    if (_filters.tagIds != null && _filters.tagIds!.isNotEmpty) {
+      final tagIdSet = _filters.tagIds!.toSet();
+      list = list.where((t) =>
+          t.tagIds.isNotEmpty && t.tagIds.any((tid) => tagIdSet.contains(tid))).toList();
     }
     if (_filters.dateFrom != null || _filters.dateTo != null) {
       list = list.where((t) {
@@ -308,6 +321,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
         }),
       ));
     }
+    if (_filters.tagIds != null && _filters.tagIds!.isNotEmpty) {
+      chips.add(_filterChip(
+        isNarrow,
+        _filters.tagIds!.length == 1 ? '1 tag' : '${_filters.tagIds!.length} tags',
+        () => setState(() {
+          _filters = _filters.copyWith(clearTagIds: true);
+          _resetPagination();
+        }),
+      ));
+    }
     return chips;
   }
 
@@ -360,6 +383,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
     for (final t in allTransactions) {
       categoryEmojis[t.categoryName] ??= t.emoji;
     }
+    final tags = ref.read(tagsProvider).value ?? [];
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -368,6 +392,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
         initialFilters: _filters,
         categories: categories,
         categoryEmojis: categoryEmojis,
+        tags: tags,
         onApply: (f) {
           setState(() {
             _filters = f;
@@ -619,17 +644,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen>
   }
 }
 
-/// Filter bottom sheet: type, category, date range, amount range, clear all, apply.
+/// Filter bottom sheet: type, category, tags, date range, amount range, clear all, apply.
 class _FilterBottomSheet extends StatefulWidget {
   const _FilterBottomSheet({
     required this.initialFilters,
     required this.categories,
     required this.categoryEmojis,
+    required this.tags,
     required this.onApply,
   });
   final _TransactionFilters initialFilters;
   final List<String> categories;
   final Map<String, String> categoryEmojis;
+  final List<TagItem> tags;
   final void Function(_TransactionFilters) onApply;
 
   @override
@@ -639,6 +666,7 @@ class _FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late TransactionType? _type;
   late List<String> _selectedCategories;
+  late List<String> _selectedTagIds;
   late DateTime? _dateFrom;
   late DateTime? _dateTo;
   late final TextEditingController _amountMinController;
@@ -649,6 +677,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     super.initState();
     _type = widget.initialFilters.type;
     _selectedCategories = List<String>.from(widget.initialFilters.categoryNames ?? []);
+    _selectedTagIds = List<String>.from(widget.initialFilters.tagIds ?? []);
     _dateFrom = widget.initialFilters.dateFrom;
     _dateTo = widget.initialFilters.dateTo;
     _amountMinController = TextEditingController(
@@ -674,10 +703,21 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     setState(() {
       _type = null;
       _selectedCategories = [];
+      _selectedTagIds = [];
       _dateFrom = null;
       _dateTo = null;
       _amountMinController.clear();
       _amountMaxController.clear();
+    });
+  }
+
+  void _toggleTag(String tagId) {
+    setState(() {
+      if (_selectedTagIds.contains(tagId)) {
+        _selectedTagIds.remove(tagId);
+      } else {
+        _selectedTagIds.add(tagId);
+      }
     });
   }
 
@@ -697,6 +737,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     widget.onApply(_TransactionFilters(
       type: _type,
       categoryNames: _selectedCategories.isEmpty ? null : List.from(_selectedCategories),
+      tagIds: _selectedTagIds.isEmpty ? null : List.from(_selectedTagIds),
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       amountMin: min,
@@ -825,6 +866,28 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       },
                     ),
                   ),
+                  if (widget.tags.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    const Text('Tags', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))),
+                    const SizedBox(height: 4),
+                    const Text('Select one or more', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.tags.map((tag) {
+                        final selected = _selectedTagIds.contains(tag.id);
+                        return FilterChip(
+                          label: Text(tag.name, style: const TextStyle(fontSize: 13)),
+                          selected: selected,
+                          onSelected: (_) => _toggleTag(tag.id),
+                          selectedColor: Colors.grey[300],
+                          checkmarkColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   const Text('Date range', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))),
                   const SizedBox(height: 8),

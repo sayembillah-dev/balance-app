@@ -4,6 +4,7 @@ import '../data/dummy_data.dart';
 import '../providers/app_providers.dart';
 import '../providers/currency_provider.dart';
 import '../utils/currency_format.dart';
+import 'tags_screen.dart';
 
 enum AddTransactionTab { spend, income, transfer, preset }
 
@@ -53,6 +54,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
   SubcategoryItem? _selectedSubcategory;
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
+  List<String> _selectedTagIds = [];
   bool _duplicateApplied = false;
   bool _editApplied = false;
 
@@ -211,6 +213,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             time: timeStr,
             accountId: _selectedFromAccount?.id,
             transferPairId: pairId,
+            tagIds: _selectedTagIds,
           ),
         );
         await notifier.replaceById(
@@ -226,6 +229,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
             time: timeStr,
             accountId: _selectedToAccount?.id,
             transferPairId: pairId,
+            tagIds: _selectedTagIds,
           ),
         );
       } else {
@@ -242,6 +246,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
           time: timeStr,
           accountId: _selectedFromAccount?.id,
           transferPairId: idOut,
+          tagIds: _selectedTagIds,
         ));
         final idIn = notifier.nextId();
         await notifier.add(TransactionItem(
@@ -255,6 +260,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
           time: timeStr,
           accountId: _selectedToAccount?.id,
           transferPairId: idOut,
+          tagIds: _selectedTagIds,
         ));
       }
     } else {
@@ -271,6 +277,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
         date: dateStr,
         time: timeStr,
         accountId: accountId,
+        tagIds: _selectedTagIds,
       );
       if (widget.editFrom != null) {
         await notifier.replaceById(widget.editFrom!.id, item);
@@ -533,6 +540,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
       _selectedCategory = cat;
       _selectedSubcategory = sub;
       _selectedAccount = account;
+      _selectedTagIds = List<String>.from(item.tagIds);
       if (targetTab == 2 && fromAcc != null && toAcc != null) {
         _selectedFromAccount = fromAcc;
         _selectedToAccount = toAcc;
@@ -630,6 +638,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
       _selectedCategory = cat;
       _selectedSubcategory = sub;
       _selectedAccount = account;
+      _selectedTagIds = List<String>.from(item.tagIds);
       _selectedFromAccount = _selectedFromAccount ?? account;
       _selectedToAccount =
           _selectedToAccount ?? (accounts.length > 1 ? accounts[1] : account);
@@ -683,6 +692,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
           ],
           const SizedBox(height: 12),
           _buildDescriptionCard(cardPadding, fontSize),
+          const SizedBox(height: 12),
+          _buildChooseTagsCard(cardPadding, fontSize),
           const SizedBox(height: 12),
           _buildDateTimeCard(cardPadding, fontSize),
           const SizedBox(height: 28),
@@ -1059,6 +1070,38 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChooseTagsCard(double cardPadding, double fontSize) {
+    final tags = ref.watch(tagsProvider).value ?? [];
+    final selectedTags = tags.where((t) => _selectedTagIds.contains(t.id)).toList();
+    final valueText = selectedTags.isEmpty
+        ? 'Choose tags'
+        : selectedTags.map((t) => t.name).join(', ');
+    return _SelectCard(
+      label: 'Tags',
+      value: valueText,
+      leading: Icon(
+        Icons.label_outline_rounded,
+        size: 22,
+        color: Colors.grey[600],
+      ),
+      onTap: () async {
+        final result = await Navigator.of(context).push<List<String>>(
+          MaterialPageRoute(
+            builder: (context) => TagsScreen(
+              initialSelectedIds: _selectedTagIds,
+              onDone: (_) {},
+            ),
+          ),
+        );
+        if (result != null && mounted) {
+          setState(() => _selectedTagIds = result);
+        }
+      },
+      padding: cardPadding,
+      fontSize: fontSize,
     );
   }
 

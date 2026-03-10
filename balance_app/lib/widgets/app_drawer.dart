@@ -45,6 +45,11 @@ const List<AppDrawerPage> appDrawerPages = [
     icon: Icons.savings_rounded,
   ),
   AppDrawerPage(
+    routeName: '/tags',
+    label: 'Tags',
+    icon: Icons.label_rounded,
+  ),
+  AppDrawerPage(
     routeName: '/settings',
     label: 'Settings',
     icon: Icons.settings_rounded,
@@ -142,7 +147,7 @@ class AppDrawerPanel extends StatelessWidget {
                             final nav = Navigator.of(context);
                             if (page.routeName == '/dashboard') {
                               nav.popUntil((route) => route.settings.name == '/dashboard');
-                            } else if (page.routeName == '/accounts' || page.routeName == '/transactions' || page.routeName == '/categories' || page.routeName == '/presets' || page.routeName == '/budgets' || page.routeName == '/settings') {
+                            } else if (page.routeName == '/accounts' || page.routeName == '/transactions' || page.routeName == '/categories' || page.routeName == '/presets' || page.routeName == '/budgets' || page.routeName == '/tags' || page.routeName == '/settings') {
                               nav.pushNamed(page.routeName);
                             } else {
                               nav.pushNamed(page.routeName);

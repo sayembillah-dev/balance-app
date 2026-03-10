@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/dummy_data.dart';
+import '../data/models.dart';
 import '../providers/app_providers.dart';
 import '../providers/currency_provider.dart';
 import '../utils/currency_format.dart';
@@ -47,6 +48,12 @@ List<Widget> _transferAccountRows(
     const SizedBox(height: 12),
     _DetailRow(label: 'To account', value: toName),
   ];
+}
+
+String _tagNamesForIds(List<TagItem> allTags, List<String> ids) {
+  if (ids.isEmpty) return '—';
+  final byId = {for (final t in allTags) t.id: t.name};
+  return ids.map((id) => byId[id] ?? '(removed)').join(', ');
 }
 
 /// Content of the transaction detail bottom sheet.
@@ -141,6 +148,13 @@ class _TransactionDetailSheetContent extends ConsumerWidget {
                         if (item.description != null && item.description!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _DetailRow(label: 'Description', value: item.description!),
+                        ],
+                        if (item.tagIds.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          _DetailRow(
+                            label: 'Tags',
+                            value: _tagNamesForIds(ref.watch(tagsProvider).value ?? [], item.tagIds),
+                          ),
                         ],
                         const SizedBox(height: 12),
                         _DetailRow(label: 'Amount', value: formatStoredAmountWithCurrency(item.amount, ref.watch(selectedCurrencyCodeProvider))),
