@@ -15,6 +15,7 @@ import 'screens/presets_screen.dart';
 import 'screens/budgets_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/server_try_screen.dart';
+import 'screens/pin_entry_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: BalanceApp()));
@@ -49,6 +50,7 @@ class BalanceApp extends StatelessWidget {
         '/presets': (context) => const PresetsScreen(),
         '/budgets': (context) => const BudgetsScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/pin': (context) => const PinEntryScreen(),
       },
     );
   }
@@ -102,7 +104,13 @@ class _SplashScreenState extends State<SplashScreen>
     final choseTryMode = await loadChoseTryMode();
     if (!mounted) return;
     if (choseTryMode) {
-      Navigator.of(context).pushReplacementNamed('/dashboard');
+      final pinEnabled = await loadPinEnabled();
+      if (!mounted) return;
+      if (pinEnabled) {
+        Navigator.of(context).pushReplacementNamed('/pin');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      }
     } else {
       Navigator.of(context).pushReplacementNamed('/server-try');
     }

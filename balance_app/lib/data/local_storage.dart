@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
 import 'models.dart';
 
 const String _keyAccounts = 'accounts';
@@ -12,6 +13,8 @@ const String _keyMonthlyBudgets = 'monthly_budgets';
 const String _keyCategories = 'categories';
 const String _keySelectedCurrency = 'selected_currency';
 const String _keyChoseTryMode = 'chose_try_mode';
+const String _keyPinHash = 'pin_hash';
+const String _keyPinEnabled = 'pin_enabled';
 
 /// Returns SharedPreferences, or null if the plugin is not available (e.g. after hot restart, or in tests).
 Future<SharedPreferences?> _prefs() async {
@@ -192,4 +195,54 @@ Future<bool> loadChoseTryMode() async {
   final prefs = await _prefs();
   if (prefs == null) return false;
   return prefs.getBool(_keyChoseTryMode) ?? false;
+}
+
+// --- PIN (try mode, stored locally) ---
+
+String _hashPin(String pin) {
+  final bytes = utf8.encode(pin);
+  final digest = sha256.convert(bytes);
+  return digest.toString();
+}
+
+Future<void> savePinHash(String pin) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setString(_keyPinHash, _hashPin(pin));
+}
+
+Future<String?> loadPinHash() async {
+  final prefs = await _prefs();
+  if (prefs == null) return null;
+  return prefs.getString(_keyPinHash);
+}
+
+Future<bool> validatePin(String pin) async {
+  final stored = await loadPinHash();
+  if (stored == null) return false;
+  return stored == _hashPin(pin);
+}
+
+Future<bool> hasPin() async {
+  final hash = await loadPinHash();
+  return hash != null && hash.isNotEmpty;
+}
+
+Future<void> savePinEnabled(bool enabled) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setBool(_keyPinEnabled, enabled);
+}
+
+Future<bool> loadPinEnabled() async {
+  final prefs = await _prefs();
+  if (prefs == null) return false;
+  return prefs.getBool(_keyPinEnabled) ?? false;
+}
+
+Future<void> clearPin() async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.remove(_keyPinHash);
+  await prefs.setBool(_keyPinEnabled, false);
 }

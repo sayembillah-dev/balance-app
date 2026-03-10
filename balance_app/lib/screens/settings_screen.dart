@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_drawer.dart';
 import '../providers/currency_provider.dart';
+import '../data/local_storage.dart';
 import 'currency_picker_screen.dart';
+import 'pin_settings_screen.dart';
 
 /// Settings: default currency only. Same layout as other secondary screens.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -17,6 +19,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _drawerController;
   late Animation<double> _drawerAnimation;
+  bool _pinEnabled = false;
 
   @override
   void initState() {
@@ -29,6 +32,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       parent: _drawerController,
       curve: Curves.easeInOut,
     );
+    _loadPinState();
+  }
+
+  Future<void> _loadPinState() async {
+    final enabled = await loadPinEnabled();
+    if (mounted) setState(() => _pinEnabled = enabled);
   }
 
   @override
@@ -121,6 +130,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                                   value: 'Coming soon',
                                   onTap: () {
                                     // Placeholder for future sign-in
+                                  },
+                                ),
+                              ],
+                            ),
+                            _SettingsSection(
+                              title: 'Security',
+                              children: [
+                                _SettingsTile(
+                                  icon: Icons.lock_rounded,
+                                  label: 'App PIN',
+                                  value: _pinEnabled ? 'On' : 'Off',
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const PinSettingsScreen(),
+                                      ),
+                                    );
+                                    if (mounted) _loadPinState();
                                   },
                                 ),
                               ],
