@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../data/local_storage.dart';
 
-/// Minimal welcome screen after splash: Try (local) or Server sign in (later).
-/// For now only "Try" is active; sign in is a placeholder.
+/// First-time welcome only: Try (local) or Sign in. User sees both options once;
+/// if they choose Try, next launches go straight to dashboard. Sign in also in Settings.
 class ServerTryScreen extends StatelessWidget {
   const ServerTryScreen({super.key});
 
@@ -52,13 +53,16 @@ class ServerTryScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(flex: 2),
-              // Try — primary CTA
+              // Try — primary CTA; persist choice so next launch goes to dashboard
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacementNamed('/dashboard');
+                  onPressed: () async {
+                    await saveChoseTryMode(true);
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacementNamed('/dashboard');
+                    }
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.black,
@@ -80,7 +84,7 @@ class ServerTryScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // Sign in — placeholder for later
+              // Sign in — placeholder; also available in Settings
               SizedBox(
                 width: double.infinity,
                 height: 52,

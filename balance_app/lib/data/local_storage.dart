@@ -11,6 +11,7 @@ const String _keyPresets = 'presets';
 const String _keyMonthlyBudgets = 'monthly_budgets';
 const String _keyCategories = 'categories';
 const String _keySelectedCurrency = 'selected_currency';
+const String _keyChoseTryMode = 'chose_try_mode';
 
 /// Returns SharedPreferences, or null if the plugin is not available (e.g. after hot restart, or in tests).
 Future<SharedPreferences?> _prefs() async {
@@ -178,4 +179,17 @@ Future<String> loadSelectedCurrency() async {
   final prefs = await _prefs();
   if (prefs == null) return defaultCurrencyCode;
   return prefs.getString(_keySelectedCurrency) ?? defaultCurrencyCode;
+}
+
+/// Persist that the user chose Try mode on first launch. After that, app opens directly to dashboard.
+Future<void> saveChoseTryMode(bool value) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setBool(_keyChoseTryMode, value);
+}
+
+Future<bool> loadChoseTryMode() async {
+  final prefs = await _prefs();
+  if (prefs == null) return false;
+  return prefs.getBool(_keyChoseTryMode) ?? false;
 }

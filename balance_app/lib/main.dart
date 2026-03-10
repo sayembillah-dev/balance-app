@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import 'theme/app_theme.dart';
+import 'data/local_storage.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/transactions_screen.dart';
@@ -92,13 +93,19 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // After splash animation + brief hold, navigate to Server/Try screen
-    Future.delayed(const Duration(milliseconds: 1500), _navigateToWelcome);
+    // After splash animation + brief hold, route: dashboard if already chose Try, else server-try (first time)
+    Future.delayed(const Duration(milliseconds: 1500), _navigateAfterSplash);
   }
 
-  void _navigateToWelcome() {
+  Future<void> _navigateAfterSplash() async {
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/server-try');
+    final choseTryMode = await loadChoseTryMode();
+    if (!mounted) return;
+    if (choseTryMode) {
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/server-try');
+    }
   }
 
   @override

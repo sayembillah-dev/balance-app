@@ -113,6 +113,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                           ),
                           children: [
                             _SettingsSection(
+                              title: 'Account',
+                              children: [
+                                _SettingsTile(
+                                  icon: Icons.login_rounded,
+                                  label: 'Sign in',
+                                  value: 'Coming soon',
+                                  onTap: () {
+                                    // Placeholder for future sign-in
+                                  },
+                                ),
+                              ],
+                            ),
+                            _SettingsSection(
                               title: 'Preferences',
                               children: [
                                 _SettingsTile(
