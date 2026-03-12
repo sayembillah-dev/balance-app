@@ -10,6 +10,7 @@ const String _keyAccountOrder = 'account_order';
 const String _keyTransactions = 'transactions';
 const String _keyPresets = 'presets';
 const String _keyMonthlyBudgets = 'monthly_budgets';
+const String _keyReceivablesPayables = 'receivables_payables';
 const String _keyCategories = 'categories';
 const String _keyTags = 'tags';
 const String _keySelectedCurrency = 'selected_currency';
@@ -141,6 +142,30 @@ Future<List<MonthlyBudget>> loadMonthlyBudgets() async {
     final list = jsonDecode(raw) as List<dynamic>;
     return list
         .map((e) => MonthlyBudget.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Future<void> saveReceivablesPayables(List<ReceivablePayableItem> list) async {
+  final prefs = await _prefs();
+  if (prefs == null) return;
+  await prefs.setString(
+    _keyReceivablesPayables,
+    jsonEncode(list.map((e) => e.toJson()).toList()),
+  );
+}
+
+Future<List<ReceivablePayableItem>> loadReceivablesPayables() async {
+  final prefs = await _prefs();
+  if (prefs == null) return [];
+  final raw = prefs.getString(_keyReceivablesPayables);
+  if (raw == null) return [];
+  try {
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => ReceivablePayableItem.fromJson(e as Map<String, dynamic>))
         .toList();
   } catch (_) {
     return [];

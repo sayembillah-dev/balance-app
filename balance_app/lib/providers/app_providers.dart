@@ -336,6 +336,70 @@ Future<void> cleanupPastMonthBudgetTags(WidgetRef ref) async {
   }
 }
 
+// --- Receivables & Payables ---
+
+class ReceivablesPayablesNotifier
+    extends AsyncNotifier<List<ReceivablePayableItem>> {
+  @override
+  Future<List<ReceivablePayableItem>> build() async {
+    return await loadReceivablesPayables();
+  }
+
+  Future<void> add(ReceivablePayableItem item) async {
+    final list = state.value ?? [];
+    final newList = [...list, item];
+    state = AsyncValue.data(newList);
+    await saveReceivablesPayables(newList);
+  }
+
+  Future<void> replaceById(String id, ReceivablePayableItem item) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = item;
+    state = AsyncValue.data(newList);
+    await saveReceivablesPayables(newList);
+  }
+
+  Future<void> removeById(String id) async {
+    final list = state.value ?? [];
+    final newList = list.where((e) => e.id != id).toList();
+    state = AsyncValue.data(newList);
+    await saveReceivablesPayables(newList);
+  }
+
+  Future<void> toggleStatus(String id) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final current = list[i];
+    final now = DateTime.now();
+    final nextStatus = current.status == ReceivablePayableStatus.pending
+        ? ReceivablePayableStatus.completed
+        : ReceivablePayableStatus.pending;
+    final updated = current.copyWith(
+      status: nextStatus,
+      completedAt: nextStatus == ReceivablePayableStatus.completed ? now : null,
+    );
+    final newList = [...list];
+    newList[i] = updated;
+    state = AsyncValue.data(newList);
+    await saveReceivablesPayables(newList);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    final ids = list.map((e) => int.tryParse(e.id) ?? 0);
+    return ((ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b)) + 1)
+        .toString();
+  }
+}
+
+final receivablesPayablesProvider = AsyncNotifierProvider<
+    ReceivablesPayablesNotifier,
+    List<ReceivablePayableItem>>(ReceivablesPayablesNotifier.new);
+
 // --- Categories ---
 
 List<TransactionCategory> _seedCategories() {
@@ -526,6 +590,22 @@ final balanceProvider = Provider<String>((ref) {
     total += getTransactionEffectiveAmount(t);
   }
   return formatAmountWithCurrency(total, currencyCode);
+});
+
+/// Raw numeric balance value (same as [balanceProvider] but without formatting).
+final balanceValueProvider = Provider<double>((ref) {
+  final accountsAsync = ref.watch(accountsProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+  final accountsList = accountsAsync.value ?? <AccountItem>[];
+  final transactionsList = transactionsAsync.value ?? <TransactionItem>[];
+  double total = 0;
+  for (final a in accountsList) {
+    total += a.initialBalance;
+  }
+  for (final t in transactionsList) {
+    total += getTransactionEffectiveAmount(t);
+  }
+  return total;
 });
 
 // --- Account monthly totals (monthExpense / monthIncome computed for current month) ---

@@ -456,3 +456,104 @@ class PresetItem {
     );
   }
 }
+
+/// Status of a receivable or payable item.
+enum ReceivablePayableStatus { pending, completed }
+
+extension ReceivablePayableStatusJson on ReceivablePayableStatus {
+  static ReceivablePayableStatus fromString(String s) {
+    switch (s) {
+      case 'completed':
+        return ReceivablePayableStatus.completed;
+      case 'pending':
+      default:
+        return ReceivablePayableStatus.pending;
+    }
+  }
+
+  String toJson() => name;
+}
+
+/// Simple model for receivables and payables tracked in the dedicated screen.
+class ReceivablePayableItem {
+  const ReceivablePayableItem({
+    required this.id,
+    required this.isReceivable,
+    required this.name,
+    required this.amount,
+    required this.status,
+    required this.createdAt,
+    this.dueDate,
+    this.notes,
+    this.completedAt,
+  });
+
+  final String id;
+  /// true = Receivable tab, false = Payables tab.
+  final bool isReceivable;
+  final String name;
+  /// Stored as numeric amount; currency is applied at display-time.
+  final double amount;
+  final ReceivablePayableStatus status;
+  final DateTime createdAt;
+  final DateTime? dueDate;
+  final String? notes;
+  final DateTime? completedAt;
+
+  ReceivablePayableItem copyWith({
+    String? id,
+    bool? isReceivable,
+    String? name,
+    double? amount,
+    ReceivablePayableStatus? status,
+    DateTime? createdAt,
+    DateTime? dueDate,
+    String? notes,
+    DateTime? completedAt,
+  }) {
+    return ReceivablePayableItem(
+      id: id ?? this.id,
+      isReceivable: isReceivable ?? this.isReceivable,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      dueDate: dueDate ?? this.dueDate,
+      notes: notes ?? this.notes,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'isReceivable': isReceivable,
+        'name': name,
+        'amount': amount,
+        'status': status.toJson(),
+        'createdAt': createdAt.toIso8601String(),
+        'dueDate': dueDate?.toIso8601String(),
+        'notes': notes,
+        'completedAt': completedAt?.toIso8601String(),
+      };
+
+  static ReceivablePayableItem fromJson(Map<String, dynamic> json) {
+    DateTime? _parse(String? v) {
+      if (v == null || v.isEmpty) return null;
+      return DateTime.tryParse(v);
+    }
+
+    return ReceivablePayableItem(
+      id: json['id'] as String,
+      isReceivable: json['isReceivable'] as bool? ?? true,
+      name: json['name'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      status: ReceivablePayableStatusJson.fromString(
+        json['status'] as String? ?? 'pending',
+      ),
+      createdAt: _parse(json['createdAt'] as String?) ?? DateTime.now(),
+      dueDate: _parse(json['dueDate'] as String?),
+      notes: json['notes'] as String?,
+      completedAt: _parse(json['completedAt'] as String?),
+    );
+  }
+}
