@@ -400,6 +400,79 @@ final receivablesPayablesProvider = AsyncNotifierProvider<
     ReceivablesPayablesNotifier,
     List<ReceivablePayableItem>>(ReceivablesPayablesNotifier.new);
 
+// --- Notes ---
+
+class NotesNotifier extends AsyncNotifier<List<NoteItem>> {
+  @override
+  Future<List<NoteItem>> build() async {
+    final list = await loadNotes();
+    return _sorted(list);
+  }
+
+  List<NoteItem> _sorted(List<NoteItem> list) {
+    final notes = [...list];
+    notes.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+    return notes;
+  }
+
+  Future<void> add(NoteItem note) async {
+    final list = state.value ?? [];
+    final newList = _sorted([...list, note]);
+    state = AsyncValue.data(newList);
+    await saveNotes(newList);
+  }
+
+  Future<void> replaceById(String id, NoteItem note) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final newList = [...list];
+    newList[i] = note;
+    final sorted = _sorted(newList);
+    state = AsyncValue.data(sorted);
+    await saveNotes(sorted);
+  }
+
+  Future<void> removeById(String id) async {
+    final list = state.value ?? [];
+    final newList = list.where((e) => e.id != id).toList();
+    final sorted = _sorted(newList);
+    state = AsyncValue.data(sorted);
+    await saveNotes(sorted);
+  }
+
+  Future<void> togglePinned(String id) async {
+    final list = state.value ?? [];
+    final i = list.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final current = list[i];
+    final updated = current.copyWith(
+      isPinned: !current.isPinned,
+      updatedAt: DateTime.now(),
+    );
+    final newList = [...list];
+    newList[i] = updated;
+    final sorted = _sorted(newList);
+    state = AsyncValue.data(sorted);
+    await saveNotes(sorted);
+  }
+
+  String nextId() {
+    final list = state.value ?? [];
+    final ids = list.map((e) => int.tryParse(e.id) ?? 0);
+    return ((ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b)) + 1)
+        .toString();
+  }
+}
+
+final notesProvider =
+    AsyncNotifierProvider<NotesNotifier, List<NoteItem>>(NotesNotifier.new);
+
 // --- Categories ---
 
 List<TransactionCategory> _seedCategories() {

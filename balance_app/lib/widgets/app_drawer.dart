@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/app_providers.dart';
 
 /// Drawer page entry for app drawer.
 class AppDrawerPage {
@@ -50,6 +53,11 @@ const List<AppDrawerPage> appDrawerPages = [
     icon: Icons.swap_horiz_rounded,
   ),
   AppDrawerPage(
+    routeName: '/notes',
+    label: 'Notes',
+    icon: Icons.note_rounded,
+  ),
+  AppDrawerPage(
     routeName: '/tags',
     label: 'Tags',
     icon: Icons.label_rounded,
@@ -63,7 +71,7 @@ const List<AppDrawerPage> appDrawerPages = [
 
 /// Black side drawer panel. Use with a Stack; position/size via [width].
 /// [currentRouteName] highlights the active page. Tapping a page closes drawer and navigates.
-class AppDrawerPanel extends StatelessWidget {
+class AppDrawerPanel extends ConsumerWidget {
   const AppDrawerPanel({
     super.key,
     required this.width,
@@ -76,7 +84,7 @@ class AppDrawerPanel extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final media = MediaQuery.of(context);
     final top = media.padding.top;
     final bottom = media.padding.bottom;
@@ -88,6 +96,7 @@ class AppDrawerPanel extends StatelessWidget {
     final iconSize = isNarrow ? 22.0 : 24.0;
     final fontSize = isNarrow ? 15.0 : 16.0;
     final versionFontSize = isNarrow ? 11.0 : 12.0;
+    final notesCount = ref.watch(notesProvider).value?.length ?? 0;
 
     return Positioned(
       left: 0,
@@ -139,6 +148,9 @@ class AppDrawerPanel extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     children: appDrawerPages.map((page) {
                       final isActive = currentRouteName == page.routeName;
+                      final bool isNotesPage = page.routeName == '/notes';
+                      final String? badgeText =
+                          isNotesPage && notesCount > 0 ? '$notesCount' : null;
                       return _DrawerItem(
                         icon: page.icon,
                         label: page.label,
@@ -146,13 +158,14 @@ class AppDrawerPanel extends StatelessWidget {
                         fontSize: fontSize,
                         height: itemHeight,
                         isActive: isActive,
+                        badgeText: badgeText,
                         onTap: () {
                           onClose();
                           if (!isActive) {
                             final nav = Navigator.of(context);
                             if (page.routeName == '/dashboard') {
                               nav.popUntil((route) => route.settings.name == '/dashboard');
-                            } else if (page.routeName == '/accounts' || page.routeName == '/transactions' || page.routeName == '/categories' || page.routeName == '/presets' || page.routeName == '/budgets' || page.routeName == '/receivables-payables' || page.routeName == '/tags' || page.routeName == '/settings') {
+                            } else if (page.routeName == '/accounts' || page.routeName == '/transactions' || page.routeName == '/categories' || page.routeName == '/presets' || page.routeName == '/budgets' || page.routeName == '/receivables-payables' || page.routeName == '/tags' || page.routeName == '/settings' || page.routeName == '/notes') {
                               nav.pushNamed(page.routeName);
                             } else {
                               nav.pushNamed(page.routeName);
@@ -187,6 +200,7 @@ class _DrawerItem extends StatelessWidget {
     required this.fontSize,
     required this.height,
     required this.isActive,
+    this.badgeText,
     required this.onTap,
   });
 
@@ -196,6 +210,7 @@ class _DrawerItem extends StatelessWidget {
   final double fontSize;
   final double height;
   final bool isActive;
+  final String? badgeText;
   final VoidCallback onTap;
 
   @override
@@ -223,14 +238,32 @@ class _DrawerItem extends StatelessWidget {
                 color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.9),
               ),
               SizedBox(width: iconSize * 0.9),
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSize,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  ),
                 ),
               ),
+              if (badgeText != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badgeText!,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize - 3,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

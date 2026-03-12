@@ -18,6 +18,7 @@ import 'screens/server_try_screen.dart';
 import 'screens/pin_entry_screen.dart';
 import 'screens/tags_screen.dart';
 import 'screens/receivables_payables_screen.dart';
+import 'screens/notes_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: BalanceApp()));
@@ -55,6 +56,7 @@ class BalanceApp extends StatelessWidget {
         '/tags': (context) => const TagsScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/pin': (context) => const PinEntryScreen(),
+        '/notes': (context) => const NotesScreen(),
       },
     );
   }

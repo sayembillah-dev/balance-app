@@ -16,6 +16,7 @@ extension TransactionTypeJson on TransactionType {
         return TransactionType.deducted;
     }
   }
+
   String toJson() => name;
 }
 
@@ -50,12 +51,12 @@ class SubcategoryItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'emoji': emoji,
-        'id': id,
-        'isHidden': isHidden,
-        'isUserCreated': isUserCreated,
-      };
+    'name': name,
+    'emoji': emoji,
+    'id': id,
+    'isHidden': isHidden,
+    'isUserCreated': isUserCreated,
+  };
 
   static SubcategoryItem fromJson(Map<String, dynamic> json) {
     return SubcategoryItem(
@@ -77,8 +78,10 @@ class TagItem {
   });
   final String id;
   final String name;
+
   /// Optional color as hex string (e.g. "FF5733").
   final String? colorHex;
+
   /// When non-null, this tag was auto-created for that budget.
   final String? budgetId;
 
@@ -97,11 +100,11 @@ class TagItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'colorHex': colorHex,
-        'budgetId': budgetId,
-      };
+    'id': id,
+    'name': name,
+    'colorHex': colorHex,
+    'budgetId': budgetId,
+  };
 
   static TagItem fromJson(Map<String, dynamic> json) {
     return TagItem(
@@ -144,12 +147,12 @@ class TransactionCategory {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'emoji': emoji,
-        'subcategories': subcategories.map((s) => s.toJson()).toList(),
-        'isUserCreated': isUserCreated,
-      };
+    'id': id,
+    'name': name,
+    'emoji': emoji,
+    'subcategories': subcategories.map((s) => s.toJson()).toList(),
+    'isUserCreated': isUserCreated,
+  };
 
   static TransactionCategory fromJson(Map<String, dynamic> json) {
     return TransactionCategory(
@@ -176,16 +179,17 @@ class BudgetCategoryEntry {
   final String categoryName;
   final String emoji;
   final double budgetAmount;
+
   /// Auto-created tag id for this budget entry (current month only).
   final String? tagId;
 
   Map<String, dynamic> toJson() => {
-        'categoryId': categoryId,
-        'categoryName': categoryName,
-        'emoji': emoji,
-        'budgetAmount': budgetAmount,
-        'tagId': tagId,
-      };
+    'categoryId': categoryId,
+    'categoryName': categoryName,
+    'emoji': emoji,
+    'budgetAmount': budgetAmount,
+    'tagId': tagId,
+  };
 
   static BudgetCategoryEntry fromJson(Map<String, dynamic> json) {
     return BudgetCategoryEntry(
@@ -212,6 +216,7 @@ class MonthlyBudget {
   final int year;
   final double regularIncome;
   final List<BudgetCategoryEntry> entries;
+
   /// Single auto-created "Budget" tag id for this budget (current month only). All entries share it.
   final String? budgetTagId;
 
@@ -220,19 +225,29 @@ class MonthlyBudget {
   double get remaining => regularIncome - totalBudgeted;
 
   static const List<String> monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   String get monthYearLabel => '${monthNames[month - 1]} $year';
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'month': month,
-        'year': year,
-        'regularIncome': regularIncome,
-        'entries': entries.map((e) => e.toJson()).toList(),
-        'budgetTagId': budgetTagId,
-      };
+    'id': id,
+    'month': month,
+    'year': year,
+    'regularIncome': regularIncome,
+    'entries': entries.map((e) => e.toJson()).toList(),
+    'budgetTagId': budgetTagId,
+  };
 
   static MonthlyBudget fromJson(Map<String, dynamic> json) {
     return MonthlyBudget(
@@ -287,14 +302,14 @@ class AccountItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'accountType': accountType,
-        'monthExpense': monthExpense,
-        'monthIncome': monthIncome,
-        'emojis': emojis,
-        'initialBalance': initialBalance,
-      };
+    'id': id,
+    'name': name,
+    'accountType': accountType,
+    'monthExpense': monthExpense,
+    'monthIncome': monthIncome,
+    'emojis': emojis,
+    'initialBalance': initialBalance,
+  };
 
   static AccountItem fromJson(Map<String, dynamic> json) {
     return AccountItem(
@@ -332,24 +347,26 @@ class TransactionItem {
   final String date;
   final String time;
   final String? accountId;
+
   /// When non-null, this transaction is one leg of a transfer; the other leg shares the same id.
   final String? transferPairId;
+
   /// Tag IDs attached to this transaction.
   final List<String> tagIds;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'categoryName': categoryName,
-        'description': description,
-        'emoji': emoji,
-        'amount': amount,
-        'type': type.toJson(),
-        'date': date,
-        'time': time,
-        'accountId': accountId,
-        'transferPairId': transferPairId,
-        'tagIds': tagIds,
-      };
+    'id': id,
+    'categoryName': categoryName,
+    'description': description,
+    'emoji': emoji,
+    'amount': amount,
+    'type': type.toJson(),
+    'date': date,
+    'time': time,
+    'accountId': accountId,
+    'transferPairId': transferPairId,
+    'tagIds': tagIds,
+  };
 
   static TransactionItem fromJson(Map<String, dynamic> json) {
     final tagIdsRaw = json['tagIds'];
@@ -427,24 +444,26 @@ class PresetItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'transactionType': transactionType.toJson(),
-        'accountId': accountId,
-        'fromAccountId': fromAccountId,
-        'toAccountId': toAccountId,
-        'categoryId': categoryId,
-        'subcategoryName': subcategoryName,
-        'description': description,
-        'includeAmount': includeAmount,
-        'amount': amount,
-      };
+    'id': id,
+    'name': name,
+    'transactionType': transactionType.toJson(),
+    'accountId': accountId,
+    'fromAccountId': fromAccountId,
+    'toAccountId': toAccountId,
+    'categoryId': categoryId,
+    'subcategoryName': subcategoryName,
+    'description': description,
+    'includeAmount': includeAmount,
+    'amount': amount,
+  };
 
   static PresetItem fromJson(Map<String, dynamic> json) {
     return PresetItem(
       id: json['id'] as String,
       name: json['name'] as String,
-      transactionType: TransactionTypeJson.fromString(json['transactionType'] as String),
+      transactionType: TransactionTypeJson.fromString(
+        json['transactionType'] as String,
+      ),
       accountId: json['accountId'] as String?,
       fromAccountId: json['fromAccountId'] as String?,
       toAccountId: json['toAccountId'] as String?,
@@ -489,9 +508,11 @@ class ReceivablePayableItem {
   });
 
   final String id;
+
   /// true = Receivable tab, false = Payables tab.
   final bool isReceivable;
   final String name;
+
   /// Stored as numeric amount; currency is applied at display-time.
   final double amount;
   final ReceivablePayableStatus status;
@@ -525,16 +546,16 @@ class ReceivablePayableItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'isReceivable': isReceivable,
-        'name': name,
-        'amount': amount,
-        'status': status.toJson(),
-        'createdAt': createdAt.toIso8601String(),
-        'dueDate': dueDate?.toIso8601String(),
-        'notes': notes,
-        'completedAt': completedAt?.toIso8601String(),
-      };
+    'id': id,
+    'isReceivable': isReceivable,
+    'name': name,
+    'amount': amount,
+    'status': status.toJson(),
+    'createdAt': createdAt.toIso8601String(),
+    'dueDate': dueDate?.toIso8601String(),
+    'notes': notes,
+    'completedAt': completedAt?.toIso8601String(),
+  };
 
   static ReceivablePayableItem fromJson(Map<String, dynamic> json) {
     DateTime? _parse(String? v) {
@@ -554,6 +575,64 @@ class ReceivablePayableItem {
       dueDate: _parse(json['dueDate'] as String?),
       notes: json['notes'] as String?,
       completedAt: _parse(json['completedAt'] as String?),
+    );
+  }
+}
+
+/// Simple note model for the Notes feature.
+class NoteItem {
+  const NoteItem({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.createdAt,
+    required this.updatedAt,
+    this.isPinned = false,
+  });
+
+  final String id;
+  final String title;
+  final String content;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isPinned;
+
+  NoteItem copyWith({
+    String? id,
+    String? title,
+    String? content,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isPinned,
+  }) {
+    return NoteItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isPinned: isPinned ?? this.isPinned,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'content': content,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'isPinned': isPinned,
+  };
+
+  static NoteItem fromJson(Map<String, dynamic> json) {
+    DateTime _parse(String v) => DateTime.tryParse(v) ?? DateTime.now();
+    return NoteItem(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      createdAt: _parse(json['createdAt'] as String? ?? ''),
+      updatedAt: _parse(json['updatedAt'] as String? ?? ''),
+      isPinned: json['isPinned'] as bool? ?? false,
     );
   }
 }
